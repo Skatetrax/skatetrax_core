@@ -4,7 +4,7 @@ Provides decorators, classes, and functions specific to Skatetrax. Additionally,
 
 ## Requires
 ``` bash
-sudo yum install python3 python3-pip
+sudo dnf install python3.12-devel python3-pip
 pip install pipenv --user
 ```
 
