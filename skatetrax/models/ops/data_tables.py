@@ -1,4 +1,6 @@
 import pandas as pd
+from sqlalchemy import func
+
 from ..cyberconnect2 import Session, engine
 
 from ...utils.common import Timelines
@@ -9,6 +11,7 @@ from ..t_locations import Locations
 from ..t_icetype import IceType
 from ..t_coaches import Coaches
 from ..t_equip import uSkateConfig, uSkaterBlades, uSkaterBoots
+from ..t_maint import uSkaterMaint
 
 
 def _convert_dates(df, columns, tz):
@@ -35,32 +38,113 @@ class Equipment():
 
     def skate_configs(uSkaterUUID):
         '''
-        Lists all boot and blade combinations defined for a skater
+        Lists all boot and blade combinations defined for a skater,
+        including total ice time (minutes) per config.
         '''
 
         df = pd.read_sql_query(
             sql=Session().query(
+                uSkateConfig.sConfigID,
                 uSkateConfig.date_created,
+                uSkateConfig.sActiveFlag,
                 uSkaterBoots.bootsName,
                 uSkaterBoots.bootsModel,
                 uSkaterBlades.bladesName,
                 uSkaterBlades.bladesModel,
-                uSkateConfig.sConfigID
                 )
             .where(uSkateConfig.uSkaterUUID == uSkaterUUID)
-            .join(
-                uSkaterBoots,
-                uSkateConfig.uSkaterBootsID == uSkaterBoots.bootsID
-                  )
-            .join(
-                uSkaterBlades,
-                uSkateConfig.uSkaterBladesID == uSkaterBlades.bladesID
-                  )
+            .join(uSkaterBoots, uSkateConfig.uSkaterBootsID == uSkaterBoots.bootsID)
+            .join(uSkaterBlades, uSkateConfig.uSkaterBladesID == uSkaterBlades.bladesID)
             .statement, con=engine
-            )
+        )
 
-        df['hours'] = df.apply(lambda x: Sessions_Time.ice_time_config_in_minutes(uSkaterUUID, x['sConfigID']), axis=1)
+        if df.empty:
+            return df
+
+        hours_df = pd.read_sql_query(
+            sql=Session().query(
+                Ice_Time.uSkaterConfig.label('sConfigID'),
+                func.coalesce(func.sum(Ice_Time.ice_time), 0).label('hours')
+                )
+            .filter(Ice_Time.uSkaterUUID == uSkaterUUID)
+            .group_by(Ice_Time.uSkaterConfig)
+            .statement, con=engine
+        )
+
+        df = df.merge(hours_df, on='sConfigID', how='left')
+        df['hours'] = df['hours'].fillna(0).astype(int)
         df = df.drop(columns=['sConfigID'])
+        df = df.sort_values('date_created', ascending=False)
+
+        return df
+
+    def boots(uSkaterUUID):
+        '''Lists all boots for a skater with hours skated per boot.'''
+        df = pd.read_sql_query(
+            sql=Session().query(
+                uSkaterBoots.bootsID,
+                uSkaterBoots.date_created,
+                uSkaterBoots.bootsName,
+                uSkaterBoots.bootsModel,
+                uSkaterBoots.bootsSize,
+                uSkaterBoots.bootsPurchaseAmount,
+                )
+            .where(uSkaterBoots.uSkaterUUID == uSkaterUUID)
+            .statement, con=engine
+        )
+
+        if df.empty:
+            return df
+
+        hours_df = pd.read_sql_query(
+            sql=Session().query(
+                uSkateConfig.uSkaterBootsID.label('bootsID'),
+                func.coalesce(func.sum(Ice_Time.ice_time), 0).label('hours')
+                )
+            .join(Ice_Time, Ice_Time.uSkaterConfig == uSkateConfig.sConfigID)
+            .filter(uSkateConfig.uSkaterUUID == uSkaterUUID)
+            .group_by(uSkateConfig.uSkaterBootsID)
+            .statement, con=engine
+        )
+
+        df = df.merge(hours_df, on='bootsID', how='left')
+        df['hours'] = df['hours'].fillna(0).astype(int)
+        df = df.drop(columns=['bootsID'])
+        df = df.sort_values('date_created', ascending=False)
+
+        return df
+
+    def blades(uSkaterUUID):
+        '''Lists all blades for a skater with sharpening count per blade.'''
+        df = pd.read_sql_query(
+            sql=Session().query(
+                uSkaterBlades.bladesID,
+                uSkaterBlades.date_created,
+                uSkaterBlades.bladesName,
+                uSkaterBlades.bladesModel,
+                uSkaterBlades.bladesSize,
+                uSkaterBlades.bladesPurchaseAmount,
+                )
+            .where(uSkaterBlades.uSkaterUUID == uSkaterUUID)
+            .statement, con=engine
+        )
+
+        if df.empty:
+            return df
+
+        maint_df = pd.read_sql_query(
+            sql=Session().query(
+                uSkaterMaint.uSkaterBladesID.label('bladesID'),
+                func.count(uSkaterMaint.id).label('sharpenings')
+                )
+            .filter(uSkaterMaint.uSkaterUUID == uSkaterUUID)
+            .group_by(uSkaterMaint.uSkaterBladesID)
+            .statement, con=engine
+        )
+
+        df = df.merge(maint_df, on='bladesID', how='left')
+        df['sharpenings'] = df['sharpenings'].fillna(0).astype(int)
+        df = df.drop(columns=['bladesID'])
         df = df.sort_values('date_created', ascending=False)
 
         return df
@@ -186,26 +270,17 @@ class Sessions_Tables():
             sql=Session()
             .query(
                 uSkateConfig.date_created,
-                uSkaterBoots.bootsModel,
                 uSkaterBoots.bootsName,
-                uSkaterBlades.bladesModel,
-                uSkaterBlades.bladesName
+                uSkaterBoots.bootsModel,
+                uSkaterBlades.bladesName,
+                uSkaterBlades.bladesModel
             )
             .where(
                 (uSkateConfig.uSkaterUUID == uSkaterUUID)
-                & (uSkateConfig.uConfigActive == 1)
-                & (uSkaterBoots.uSkaterUUID == uSkaterUUID)
-                & (uSkaterBlades.uSkaterUUID == uSkaterUUID)
+                & (uSkateConfig.sActiveFlag == 1)
                 )
-            .join(
-                uSkaterBoots,
-                uSkateConfig.uSkaterBootsID == uSkaterBoots.bootsID
-                )
-            .join(
-                uSkaterBlades,
-                uSkateConfig.uSkaterBladesID == uSkaterBlades.bladesID
-                )
-            .distinct()
+            .join(uSkaterBoots, uSkateConfig.uSkaterBootsID == uSkaterBoots.bootsID)
+            .join(uSkaterBlades, uSkateConfig.uSkaterBladesID == uSkaterBlades.bladesID)
             .statement, con=engine
         )
 

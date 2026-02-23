@@ -3,9 +3,12 @@ from uuid import UUID as PyUUID
 from datetime import datetime, date, timezone, timedelta
 from unittest.mock import patch
 
-from skatetrax.models.ops.data_aggregates import SkaterAggregates, uMaintenanceV4, UserMeta
+from skatetrax.models.ops.data_aggregates import (
+    SkaterAggregates, uMaintenanceV4, UserMeta, Equipment,
+)
 from skatetrax.models.t_ice_time import Ice_Time
 from skatetrax.models.t_maint import uSkaterMaint
+from skatetrax.models.t_equip import uSkaterBlades, uSkateConfig
 
 from tests.conftest import (
     NEW_USER_UUID, NEW_CONFIG_UUID, NEW_BLADE_UUID, NEW_BOOT_UUID,
@@ -273,3 +276,108 @@ class TestUserMetaToDict:
         assert result['uSkaterLname'] == "Skater"
         assert result['uSkaterCity'] == "Testville"
         assert result['uSkaterMaintPref'] == 21
+
+
+# ---------------------------------------------------------------------------
+# Equipment.config_active -- active ice config lookup
+# ---------------------------------------------------------------------------
+class TestEquipmentConfigActive:
+
+    def test_returns_boot_blade_names(self, seeded_session):
+        with patch("skatetrax.models.ops.data_aggregates.Session", return_value=seeded_session):
+            result = Equipment.config_active(NEW_USER_UUID)
+        assert result is not None
+        assert result['bootsName'] == "Generic"
+        assert result['bootsModel'] == "Rental"
+        assert result['bladesName'] == "Generic"
+        assert result['bladesModel'] == "Rental"
+
+    def test_returns_none_for_unknown_user(self, seeded_session):
+        from uuid import uuid4
+        with patch("skatetrax.models.ops.data_aggregates.Session", return_value=seeded_session):
+            result = Equipment.config_active(uuid4())
+        assert result is None
+
+
+# ---------------------------------------------------------------------------
+# uMaintenanceV4.maint_data_all -- sharpening history for all blades
+# ---------------------------------------------------------------------------
+SECOND_BLADE_UUID = PyUUID("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
+
+
+class TestMaintDataAll:
+
+    def test_empty_history_for_new_user(self, seeded_session):
+        mv = uMaintenanceV4(NEW_USER_UUID, session=seeded_session)
+        result = mv.maint_data_all()
+        assert len(result) == 1
+        assert result[0]['blade_name'] == "Generic"
+        assert result[0]['is_active'] is True
+        assert result[0]['meta']['sharpenings'] == 0
+        assert result[0]['history'] == []
+
+    def test_active_blade_flagged_and_first(self, seeded_session):
+        now = datetime.now(timezone.utc)
+        seeded_session.add(uSkaterBlades(
+            bladesID=SECOND_BLADE_UUID, date_created=now,
+            bladesName="Coronation", bladesModel="Ace",
+            bladesSize="9.5", bladesPurchaseAmount=350,
+            uSkaterUUID=NEW_USER_UUID,
+        ))
+        seeded_session.flush()
+
+        mv = uMaintenanceV4(NEW_USER_UUID, session=seeded_session)
+        result = mv.maint_data_all()
+        assert len(result) == 2
+        assert result[0]['is_active'] is True
+        assert result[0]['blade_name'] == "Generic"
+        assert result[1]['is_active'] is False
+        assert result[1]['blade_name'] == "Coronation"
+
+    def test_sharpening_history_returned(self, seeded_session):
+        seeded_session.add(uSkaterMaint(
+            m_date=datetime(2026, 1, 15), m_hours_on=180, m_cost=25,
+            m_location=TEST_RINK_UUID, m_notes="routine",
+            m_roh="7/16", m_pref_hours=21,
+            uSkaterBladesID=NEW_BLADE_UUID,
+            uSkateConfig=None, uSkaterUUID=NEW_USER_UUID,
+        ))
+        seeded_session.add(uSkaterMaint(
+            m_date=datetime(2026, 2, 1), m_hours_on=210, m_cost=25,
+            m_location=TEST_RINK_UUID, m_notes=None,
+            m_roh="7/16", m_pref_hours=21,
+            uSkaterBladesID=NEW_BLADE_UUID,
+            uSkateConfig=None, uSkaterUUID=NEW_USER_UUID,
+        ))
+        seeded_session.flush()
+
+        mv = uMaintenanceV4(NEW_USER_UUID, session=seeded_session)
+        result = mv.maint_data_all()
+        active = result[0]
+        assert active['is_active'] is True
+        assert active['meta']['sharpenings'] == 2
+        assert len(active['history']) == 2
+        assert active['history'][0]['cost'] == 25
+        assert active['history'][0]['location'] == "Test Rink"
+
+    def test_history_ordered_newest_first(self, seeded_session):
+        seeded_session.add(uSkaterMaint(
+            m_date=datetime(2026, 1, 1), m_hours_on=100, m_cost=20,
+            m_location=TEST_RINK_UUID, m_notes=None,
+            m_roh="1/2", m_pref_hours=21,
+            uSkaterBladesID=NEW_BLADE_UUID,
+            uSkateConfig=None, uSkaterUUID=NEW_USER_UUID,
+        ))
+        seeded_session.add(uSkaterMaint(
+            m_date=datetime(2026, 2, 15), m_hours_on=200, m_cost=30,
+            m_location=TEST_RINK_UUID, m_notes=None,
+            m_roh="7/16", m_pref_hours=21,
+            uSkaterBladesID=NEW_BLADE_UUID,
+            uSkateConfig=None, uSkaterUUID=NEW_USER_UUID,
+        ))
+        seeded_session.flush()
+
+        mv = uMaintenanceV4(NEW_USER_UUID, session=seeded_session)
+        result = mv.maint_data_all()
+        dates = [h['date'] for h in result[0]['history']]
+        assert dates[0] > dates[1]

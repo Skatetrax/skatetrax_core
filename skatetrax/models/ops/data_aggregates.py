@@ -194,9 +194,16 @@ class SkaterAggregates:
 class Equipment():
 
     def config_active(uSkaterUUID):
-        config = UserMeta.skater_config_active_ice(uSkaterUUID)
-
+        """Return boot/blade details for the skater's active ice config."""
         with Session() as s:
+            config_id = (
+                s.query(uSkaterConfig.uSkaterComboIce)
+                .filter(uSkaterConfig.uSkaterUUID == uSkaterUUID)
+                .scalar()
+            )
+            if not config_id:
+                return None
+
             data = (
                 s.query(
                     uSkateConfig.date_created,
@@ -204,13 +211,13 @@ class Equipment():
                     uSkaterBoots.bootsModel,
                     uSkaterBlades.bladesName,
                     uSkaterBlades.bladesModel
-                        )
+                )
                 .join(uSkaterBoots, uSkateConfig.uSkaterBootsID == uSkaterBoots.bootsID)
                 .join(uSkaterBlades, uSkateConfig.uSkaterBladesID == uSkaterBlades.bladesID)
-                .where(uSkateConfig.sConfigID == config)
-                .one()
+                .where(uSkateConfig.sConfigID == config_id)
+                .first()
             )
-        return data._asdict()
+        return data._asdict() if data else None
 
 
 class UserMeta:
@@ -327,6 +334,16 @@ class uMaintenanceV4:
     def _get_session(self):
         return self.external_session or Session()
 
+    @currency_usd
+    def maint_cost(self):
+        """Total maintenance cost across all sharpenings for this skater."""
+        with self._get_session() as s:
+            return (
+                s.query(func.sum(uSkaterMaint.m_cost))
+                .filter(uSkaterMaint.uSkaterUUID == self.uSkaterUUID)
+                .scalar()
+            )
+
     def maint_clock(self):
         """
         Returns a dict with maintenance cycle status for charting.
@@ -422,3 +439,74 @@ class uMaintenanceV4:
             },
             "history": history,
         }
+
+    def maint_data_all(self):
+        """Sharpening history for every blade the skater owns, grouped by blade.
+
+        Returns a list of blade dicts, each with:
+          - blade_name, blade_model, is_active (bool)
+          - meta: {total_hours, sharpenings}
+          - history: [{date, hours_on, cost, location, roh, notes}, ...]
+        Active blade is first in the list.
+        """
+        with self._get_session() as session:
+            profile = (
+                session.query(uSkaterConfig)
+                .filter(uSkaterConfig.uSkaterUUID == self.uSkaterUUID)
+                .first()
+            )
+            active_blade_id = None
+            if profile and profile.uSkaterComboIce:
+                combo = (
+                    session.query(uSkateConfig.uSkaterBladesID)
+                    .filter(uSkateConfig.sConfigID == profile.uSkaterComboIce)
+                    .scalar()
+                )
+                active_blade_id = combo
+
+            all_blades = (
+                session.query(uSkaterBlades)
+                .filter(uSkaterBlades.uSkaterUUID == self.uSkaterUUID)
+                .all()
+            )
+
+            results = []
+            for blade in all_blades:
+                rows = (
+                    session.query(uSkaterMaint, Locations)
+                    .outerjoin(Locations, uSkaterMaint.m_location == Locations.rink_id)
+                    .filter(uSkaterMaint.uSkaterUUID == self.uSkaterUUID)
+                    .filter(uSkaterMaint.uSkaterBladesID == blade.bladesID)
+                    .order_by(uSkaterMaint.m_date.desc())
+                    .all()
+                )
+
+                total_min = sum(m.m_hours_on or 0 for m, _ in rows)
+                history = [
+                    {
+                        "date": utc_to_local(
+                            m.m_date,
+                            resolve_tz(loc.rink_tz if loc else None, self.tz)
+                        ).isoformat() if m.m_date else None,
+                        "hours_on": minutes_to_hours(lambda m=m: m.m_hours_on or 0)(),
+                        "cost": m.m_cost,
+                        "location": loc.rink_name if loc else None,
+                        "roh": m.m_roh,
+                        "notes": m.m_notes,
+                    }
+                    for m, loc in rows
+                ]
+
+                results.append({
+                    "blade_name": blade.bladesName,
+                    "blade_model": blade.bladesModel,
+                    "is_active": blade.bladesID == active_blade_id,
+                    "meta": {
+                        "total_hours": minutes_to_hours(lambda: total_min)(),
+                        "sharpenings": len(rows),
+                    },
+                    "history": history,
+                })
+
+        results.sort(key=lambda b: (not b["is_active"], b["blade_name"] or ""))
+        return results
