@@ -1,0 +1,12 @@
+# Skating clubs -- shared across users
+# Row 1 is always the "No Club" placeholder (must match setup_db default)
+
+- club_id: "c4dd2b9c-50f1-4f5b-a439-fd8f36a654d6"
+  club_name: "No Club"
+  club_home_rink: null
+  club_cost: 0
+
+- club_id: "REPLACE_WITH_UUID"
+  club_name: "Example Figure Skating Club"
+  club_home_rink: "REPLACE_WITH_RINK_UUID"
+  club_cost: 0

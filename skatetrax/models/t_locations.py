@@ -1,6 +1,7 @@
 from sqlalchemy import Column, DateTime, Integer, String, ForeignKey, Float, UUID
 from sqlalchemy.orm import mapped_column, Mapped
 from uuid import uuid4, UUID as UUIDV4
+from datetime import datetime, timezone
 from .base import Base
 
 
@@ -21,10 +22,12 @@ class Locations(Base):
     rink_city = Column(String)
     rink_state = Column(String)
     rink_country = Column(String)
+    rink_zip = Column(String, nullable=False)
     rink_url = Column(String)
     rink_phone = Column(String)
+    rink_tz = Column(String, nullable=True)
     data_source = Column(String)
-    date_created = Column(DateTime)
+    date_created = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     def __init__(
         self,
@@ -34,10 +37,12 @@ class Locations(Base):
         rink_city,
         rink_state,
         rink_country,
+        rink_zip,
         rink_url,
         rink_phone,
-        data_source,
-        date_created
+        rink_tz=None,
+        data_source=None,
+        date_created=None
             ):
 
         self.rink_id = rink_id
@@ -46,8 +51,10 @@ class Locations(Base):
         self.rink_city = rink_city
         self.rink_state = rink_state
         self.rink_country = rink_country
+        self.rink_zip = rink_zip
         self.rink_url = rink_url
         self.rink_phone = rink_phone
+        self.rink_tz = rink_tz
         self.data_source = data_source
         self.date_created = date_created
 

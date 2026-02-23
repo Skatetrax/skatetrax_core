@@ -6,6 +6,7 @@ import calendar
 from ...models.cyberconnect2 import Session
 from ...utils.timeframe_generator import TIMEFRAMES
 from ...utils.common import minutes_to_hours, currency_usd
+from ...utils.tz import today_in_tz, utc_to_local, resolve_tz
 
 from ..t_equip import uSkateConfig, uSkaterBlades, uSkaterBoots
 from ..t_skaterMeta import uSkaterConfig
@@ -24,9 +25,10 @@ class SkaterAggregates:
                        "88f87085-927d-4b77-b1c9-77d6de7c2d28"]
 
 
-    def __init__(self, uSkaterUUID, session=None):
+    def __init__(self, uSkaterUUID, session=None, tz=None):
         self.uSkaterUUID = uSkaterUUID
         self.external_session = session
+        self.tz = tz
 
 
     def _get_session(self):
@@ -117,14 +119,13 @@ class SkaterAggregates:
         return self.aggregate(Ice_Time, "coach_cost", start, end)
 
 
-    # Internal helper to resolve timeframe strings
     def _resolve_timeframe(self, timeframe):
         if timeframe is None or timeframe == "total":
             return None, None
         fn = TIMEFRAMES.get(timeframe)
         if not fn:
             raise ValueError(f"Unknown timeframe: {timeframe}")
-        dates = fn()
+        dates = fn(tz=self.tz)
         if dates is None:
             return None, None
         return dates["start"], dates["end"]
@@ -139,7 +140,7 @@ class SkaterAggregates:
             return m / 60.0
 
 
-        today = date.today()
+        today = today_in_tz(self.tz)
         months = []
         for i in range(11, -1, -1):
             year = today.year
@@ -242,13 +243,14 @@ class UserMeta:
             'uSkaterCity': profile.uSkaterCity,
             'uSkaterState': profile.uSkaterState,
             'uSkaterCountry': profile.uSkaterCountry,
+            'uSkaterTZ': profile.uSkaterTZ,
             'uSkaterRoles': profile.uSkaterRoles,
             'uSkaterComboIce': profile.uSkaterComboIce,
             'uSkaterComboOff': profile.uSkaterComboOff,
             'uSkaterRinkPref': profile.uSkaterRinkPref,
             'uSkaterMaintPref': profile.uSkaterMaintPref,
             'activeCoach': profile.activeCoach,
-            'org_Club_Name': profile.org_Club,
+            'org_Club': profile.org_Club,
             'org_Club_Join_Date': profile.org_Club_Join_Date,
             'org_USFSA_number':profile.org_USFSA_number
         }
@@ -264,9 +266,10 @@ class uMaintenanceV4:
     Provides data for both chart visualizations and maintenance detail views.
     """
 
-    def __init__(self, uSkaterUUID, session=None):
+    def __init__(self, uSkaterUUID, session=None, tz=None):
         self.uSkaterUUID = uSkaterUUID
         self.external_session = session
+        self.tz = tz
 
     def _get_session(self):
         return self.external_session or Session()
@@ -346,7 +349,10 @@ class uMaintenanceV4:
 
         history = [
             {
-                "date": maint.m_date.isoformat() if maint.m_date else None,
+                "date": utc_to_local(
+                    maint.m_date,
+                    resolve_tz(loc.rink_tz if loc else None, self.tz)
+                ).isoformat() if maint.m_date else None,
                 "hours_on": minutes_to_hours(lambda: maint.m_hours_on or 0)(),
                 "cost": maint.m_cost,
                 "location": loc.rink_name if loc else None,

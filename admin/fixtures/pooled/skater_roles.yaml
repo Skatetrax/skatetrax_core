@@ -1,0 +1,12 @@
+# Skater role types -- system-wide lookup table
+- id: 1
+  label: "Adult - Regular Smegular"
+
+- id: 2
+  label: "Coach - Probably also an adult skater, but specifically a coach"
+
+- id: 3
+  label: "Minor - Under 18, requires guardian representation and care"
+
+- id: 4
+  label: "Guardian - Maybe not a skater, but a parent of one or more."

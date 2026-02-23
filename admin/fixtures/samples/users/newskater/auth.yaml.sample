@@ -1,0 +1,8 @@
+# Auth credentials for this user
+# Copy to auth.yaml and set a real password. auth.yaml is gitignored.
+
+aLogin: "newskater"
+password: "CHANGE_ME"
+aEmail: "skater@example.com"
+phone_number: "5551234567"
+uSkaterUUID: "REPLACE_WITH_UUID"

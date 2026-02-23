@@ -12,7 +12,7 @@ from ..t_icetype import IceType
 from ..t_coaches import Coaches
 from ..t_equip import uSkateConfig, uSkaterBlades, uSkaterBoots
 from ..t_classes import Skate_School
-from ..t_memberships import Club_Membership, Club_Members
+from ..t_memberships import Club_Directory, Club_Members
 
 from ..t_skaterMeta import uSkaterConfig, uSkaterRoles
 
@@ -27,6 +27,7 @@ class Coach_Data():
                 session.add(Coaches(**coach))
                 session.commit()
             except Exception as why:
+                session.rollback()
                 print(why)
         session.close()
 
@@ -39,6 +40,7 @@ class Equipment_Data():
                 session.add(uSkaterBlades(**blade))
                 session.commit()
             except Exception as why:
+                session.rollback()
                 print(why)
         session.close()
 
@@ -48,6 +50,7 @@ class Equipment_Data():
                 session.add(uSkaterBoots(**boot))
                 session.commit()
             except Exception as why:
+                session.rollback()
                 print(why)
         session.close()
 
@@ -57,6 +60,7 @@ class Equipment_Data():
                 session.add(uSkateConfig(**config))
                 session.commit()
             except Exception as why:
+                session.rollback()
                 print(why)
         session.close()
 
@@ -66,6 +70,7 @@ class Equipment_Data():
                 session.add(uSkaterMaint(**maint))
                 session.commit()
             except Exception as why:
+                session.rollback()
                 print(why)
         session.close()
 
@@ -78,8 +83,8 @@ class Ice_Session():
                 session.add(Ice_Time(**asession))
                 session.commit()
             except Exception as why:
-                print(why)
                 session.rollback()
+                print(why)
         session.close()
 
     def add_skate_school(classes):
@@ -88,6 +93,7 @@ class Ice_Session():
                 session.add(Skate_School(**aclass))
                 session.commit()
             except Exception as why:
+                session.rollback()
                 print(why)
         session.close()
 
@@ -100,6 +106,7 @@ class Location_Data():
                 session.add(IceType(**ice_type))
                 session.commit()
             except Exception as why:
+                session.rollback()
                 print(why)
         session.close()
 
@@ -109,6 +116,7 @@ class Location_Data():
                 session.add(Locations(**rink))
                 session.commit()
             except Exception as why:
+                session.rollback()
                 print(why)
         session.close()
         
@@ -118,6 +126,7 @@ class Location_Data():
                 session.add(Punch_cards(**card))
                 session.commit()
             except Exception as why:
+                session.rollback()
                 print(why)
         session.close()
 
@@ -130,6 +139,7 @@ class User_Data():
                 session.add(uSkaterConfig(**data))
                 session.commit()
             except Exception as why:
+                session.rollback()
                 print(why)
         session.close()
 
@@ -139,6 +149,7 @@ class User_Data():
                 session.add(uSkaterRoles(**data))
                 session.commit()
             except Exception as why:
+                session.rollback()
                 print(why)
         session.close()
         
@@ -148,9 +159,10 @@ class Club_Data():
     def add_club(club_data):
         for data in club_data:
             try:
-                session.add(Club_Membership(**data))
+                session.add(Club_Directory(**data))
                 session.commit()
             except Exception as why:
+                session.rollback()
                 print(why)
         session.close()
         
@@ -161,6 +173,7 @@ class Club_Data():
                 session.add(Club_Members(**data))
                 session.commit()
             except Exception as why:
+                session.rollback()
                 print(why)
         session.close()
         
@@ -180,10 +193,8 @@ class AddSession:
         Returns:
             Ice_Time: The newly created row object.
         """
-        # Create new row
         new_row = Ice_Time(**data)
 
-        # Add and commit
         self.db_session.add(new_row)
         self.db_session.commit()
         self.db_session.refresh(new_row)

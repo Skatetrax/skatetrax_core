@@ -1,0 +1,28 @@
+# Maintenance history -- uSkaterUUID is injected from auth.yaml at load time
+# Each entry represents a blade sharpening event.
+# m_hours_on: total minutes on the blade since the PREVIOUS sharpening
+# m_pref_hours: preferred sharpening interval in hours (e.g., 21 = sharpen every 21 hours)
+# m_roh: radius of hollow (e.g., "7/16", "3/8", "5/8")
+# m_location: UUID of the rink/shop where the sharpening was done
+# uSkaterBladesID: UUID of the blade that was sharpened
+# uSkateConfig: UUID of the skate config at the time (optional, can be null)
+
+- m_date: "2026-02-01 00:00:00"
+  m_hours_on: 0
+  m_cost: 20.00
+  m_location: "REPLACE_WITH_RINK_UUID"
+  m_roh: "7/16"
+  uSkaterBladesID: "REPLACE_WITH_BLADE_UUID"
+  uSkateConfig: null
+  m_notes: "Initial sharpening and mounting"
+  m_pref_hours: 21
+
+- m_date: "2026-04-15 00:00:00"
+  m_hours_on: 1260
+  m_cost: 20.00
+  m_location: "REPLACE_WITH_RINK_UUID"
+  m_roh: "7/16"
+  uSkaterBladesID: "REPLACE_WITH_BLADE_UUID"
+  uSkateConfig: null
+  m_notes: null
+  m_pref_hours: 21

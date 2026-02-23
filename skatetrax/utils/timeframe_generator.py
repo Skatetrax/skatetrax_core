@@ -1,20 +1,22 @@
 from datetime import date, timedelta
+from .tz import today_in_tz
 
-def current_month():
-    today = date.today()
+
+def current_month(tz=None):
+    today = today_in_tz(tz)
     start = today.replace(day=1)
     end = today
     return {"start": start, "end": end}
 
-def last_month():
-    today = date.today()
+def last_month(tz=None):
+    today = today_in_tz(tz)
     first_of_this_month = today.replace(day=1)
     last_month_end = first_of_this_month - timedelta(days=1)
     last_month_start = last_month_end.replace(day=1)
     return {"start": last_month_start, "end": last_month_end}
 
-def last_3_months():
-    today = date.today()
+def last_3_months(tz=None):
+    today = today_in_tz(tz)
     end = today
     start_month = today.month - 3
     start_year = today.year
@@ -24,34 +26,33 @@ def last_3_months():
     start = date(start_year, start_month, 1)
     return {"start": start, "end": end}
 
-def last_12_months():
-    today = date.today()
+def last_12_months(tz=None):
+    today = today_in_tz(tz)
     start = today.replace(year=today.year - 1, month=1, day=1)
     end = today
     return {"start": start, "end": end}
 
-def previous_30_days():
-    today = date.today()
+def previous_30_days(tz=None):
+    today = today_in_tz(tz)
     start = today - timedelta(days=30)
     end = today
     return {"start": start, "end": end}
 
-def previous_60_days():
-    today = date.today()
+def previous_60_days(tz=None):
+    today = today_in_tz(tz)
     start = today - timedelta(days=60)
     end = today
     return {"start": start, "end": end}
 
-def year_to_date():
-    today = date.today()
+def year_to_date(tz=None):
+    today = today_in_tz(tz)
     start = today.replace(month=1, day=1)
     end = today
     return {"start": start, "end": end}
 
-def total():  # Lifetime total of all values
-    return None  # signals no date filtering
+def total(tz=None):
+    return None
 
-# Dictionary of all standard timeframes
 TIMEFRAMES = {
     "total": total,
     "current_month": current_month,

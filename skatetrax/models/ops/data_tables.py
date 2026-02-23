@@ -1,19 +1,25 @@
 import pandas as pd
-# from sqlalchemy import func
 from ..cyberconnect2 import Session, engine
 
 from ...utils.common import Timelines
-# from utils.common import minutes_to_hours, currency_usd
+from ...utils.tz import utc_to_local
 
 from ..t_ice_time import Ice_Time
 from ..t_locations import Locations
 from ..t_icetype import IceType
 from ..t_coaches import Coaches
 from ..t_equip import uSkateConfig, uSkaterBlades, uSkaterBoots
-#from ..ops.data_aggregates import Sessions_Time
-# from models.t_classes import Skate_School
 
-# from models.t_skaterMeta import uSkaterConfig
+
+def _convert_dates(df, columns, tz):
+    """Apply UTC→local conversion to datetime columns in a DataFrame."""
+    if tz is None:
+        return df
+    for col in columns:
+        if col in df.columns:
+            df[col] = df[col].apply(lambda d: utc_to_local(d, tz) if d is not None else d)
+    return df
+
 
 session = Session()
 
@@ -70,11 +76,14 @@ class Sessions_Tables():
         return df
         
         
-    def ice_time(uSkaterUUID):
+    def ice_time(uSkaterUUID, tz=None):
         '''
         lists all ice sessions of a particular skater via uSkaterUUID
         Returns a pandas dataframe containing joined data of:
         date, ice session meta, coach meta, rink meta.
+
+        If tz is provided, session dates are converted from UTC to that
+        IANA timezone. When omitted, dates are returned as stored (UTC).
         '''
 
         df = pd.read_sql_query(
@@ -90,6 +99,7 @@ class Sessions_Tables():
                 Locations.rink_name,
                 Locations.rink_city,
                 Locations.rink_state,
+                Locations.rink_tz,
                 )
             .where(Ice_Time.uSkaterUUID == uSkaterUUID)
             .join(Locations, Ice_Time.rink_id == Locations.rink_id)
@@ -101,16 +111,23 @@ class Sessions_Tables():
         df['coach'] = df['coach_Fname'].fillna('') + ' ' + df['coach_Lname'].fillna('')
         df = df.drop(columns=['coach_Fname', 'coach_Lname'])
 
+        if tz or df.get('rink_tz') is not None:
+            df['date'] = df.apply(
+                lambda row: utc_to_local(row['date'], row.get('rink_tz') or tz),
+                axis=1
+            )
+        df = df.drop(columns=['rink_tz'], errors='ignore')
+
         return df
 
-    def ice_time_current_month(uSkaterUUID):
+    def ice_time_current_month(uSkaterUUID, tz=None):
         '''
         lists all ice sessions of a particular skater via uSkaterUUID
         for the current month.
         Returns a pandas dataframe containing joined data of:
         date, ice session meta, coach meta, rink meta.
         '''
-        tl = Timelines.current_month()
+        tl = Timelines.current_month(tz=tz)
 
         df = pd.read_sql_query(
             sql=Session().query(
@@ -125,6 +142,7 @@ class Sessions_Tables():
                 Locations.rink_name,
                 Locations.rink_city,
                 Locations.rink_state,
+                Locations.rink_tz,
                 )
             .where(Ice_Time.uSkaterUUID == uSkaterUUID)
             .filter(Ice_Time.date >= tl['last'])
@@ -137,6 +155,13 @@ class Sessions_Tables():
 
         df['coach'] = df['coach_Fname'].fillna('') + ' ' + df['coach_Lname'].fillna('')
         df = df.drop(columns=['coach_Fname', 'coach_Lname'])
+
+        if tz or df.get('rink_tz') is not None:
+            df['date'] = df.apply(
+                lambda row: utc_to_local(row['date'], row.get('rink_tz') or tz),
+                axis=1
+            )
+        df = df.drop(columns=['rink_tz'], errors='ignore')
 
         return df
 

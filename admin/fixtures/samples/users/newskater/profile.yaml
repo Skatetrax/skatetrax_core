@@ -1,0 +1,20 @@
+# Skater profile -- uSkaterUUID is injected from auth.yaml at load time
+date_created: "2026-01-01 00:00:00"
+uSkaterFname: "First"
+uSkaterMname: ""
+uSkaterLname: "Last"
+uSkaterZip: 27601
+uSkaterCity: "Anytown"
+uSkaterState: "NC"
+uSkaterCountry: "USA"
+uSkaterTZ: "America/New_York"
+uSkaterComboIce: "REPLACE_WITH_CONFIG_UUID"
+uSkaterComboOff: null
+uSkaterRinkPref: "REPLACE_WITH_RINK_UUID"
+uSkaterMaintPref: 21
+uSkaterRoles:
+  - 1
+activeCoach: "REPLACE_WITH_COACH_UUID"
+org_Club: "c4dd2b9c-50f1-4f5b-a439-fd8f36a654d6"
+org_Club_Join_Date: null
+org_USFSA_number: null
