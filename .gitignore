@@ -7,8 +7,18 @@ __pycache__/
 assets/
 notes/
 
-# Admin tool -- auth files contain passwords, never commit them
+# Admin tool -- real data contains PII (coach contacts, personal info, etc.)
+# Only sample/template files should be committed.
 admin/**/auth.yaml
+admin/fixtures/pooled/coaches.yaml
+admin/fixtures/pooled/clubs.yaml
+admin/fixtures/pooled/locations.yaml
+admin/fixtures/users/*/profile.yaml
+admin/fixtures/users/*/equipment.yaml
+admin/fixtures/users/*/memberships.yaml
+admin/fixtures/users/*/maintenance.yaml
+admin/migrations/*/user_mappings.yaml
+admin/sessions/*/
 # C extensions
 *.so
 
