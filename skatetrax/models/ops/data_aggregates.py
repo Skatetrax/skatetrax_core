@@ -1,5 +1,6 @@
 from sqlalchemy import func, select
 from datetime import date
+from uuid import UUID as PyUUID
 import calendar
 
 
@@ -13,6 +14,8 @@ from ..t_skaterMeta import uSkaterConfig
 from ..t_maint import uSkaterMaint
 from ..t_ice_time import Ice_Time as IceTime
 from ..t_locations import Locations
+from ..t_coaches import Coaches
+from ..t_memberships import Club_Directory
 
 
 class SkaterAggregates:
@@ -20,9 +23,9 @@ class SkaterAggregates:
     Aggregator for skater metrics including ice_time, coach_time,
     costs, and now group sessions.
     """
-    GROUP_SESSION_IDS = ["db32094e-9b0d-42a5-b87f-cd47729b6c65"]
-    COMPETITION_IDS = ["7a3b3441-04d6-4b5a-afb6-eb556022c2e7",
-                       "88f87085-927d-4b77-b1c9-77d6de7c2d28"]
+    GROUP_SESSION_IDS = [PyUUID("db32094e-9b0d-42a5-b87f-cd47729b6c65")]
+    COMPETITION_IDS = [PyUUID("7a3b3441-04d6-4b5a-afb6-eb556022c2e7"),
+                       PyUUID("88f87085-927d-4b77-b1c9-77d6de7c2d28")]
 
 
     def __init__(self, uSkaterUUID, session=None, tz=None):
@@ -63,13 +66,6 @@ class SkaterAggregates:
             return total.scalar() or 0
 
 
-    @minutes_to_hours
-    def group_time(self, timeframe=None):
-        from ..t_ice_time import Ice_Time
-        start, end = self._resolve_timeframe(timeframe)
-        return self.aggregate(Ice_Time, "ice_time", start, end, ice_type_ids=self.GROUP_SESSION_IDS)
-
-
     # Convenience shortcuts
     @minutes_to_hours
     def skated(self, timeframe=None):
@@ -91,11 +87,23 @@ class SkaterAggregates:
         start, end = self._resolve_timeframe(timeframe)
         return self.aggregate(
             Ice_Time,
-            "ice_time",               # still summing ice_time minutes
+            "ice_time",
             start,
             end,
             ice_type_ids=self.GROUP_SESSION_IDS
         )
+
+
+    @minutes_to_hours
+    def practice(self, timeframe=None):
+        """Independent practice: total ice time minus coached and group."""
+        from ..t_ice_time import Ice_Time
+        start, end = self._resolve_timeframe(timeframe)
+        total = self.aggregate(Ice_Time, "ice_time", start, end)
+        coached = self.aggregate(Ice_Time, "coach_time", start, end)
+        group = self.aggregate(Ice_Time, "ice_time", start, end,
+                               ice_type_ids=self.GROUP_SESSION_IDS)
+        return max(total - coached - group, 0)
 
 
     @currency_usd
@@ -150,7 +158,7 @@ class SkaterAggregates:
                 year -= 1
             months.append((year, month, calendar.month_name[month]))
 
-        data = {"months": [], "ice_time": [], "coach_time": [], "group_sessions": [], "competitions": []}
+        data = {"months": [], "ice_time": [], "practice": [], "coach_time": [], "group_sessions": [], "competitions": []}
 
         for year, month, month_name in months:
             start = date(year, month, 1)
@@ -160,6 +168,7 @@ class SkaterAggregates:
             ice = self.aggregate(Ice_Time, "ice_time", start, end)
             coach = self.aggregate(Ice_Time, "coach_time", start, end)
             group = self.aggregate(Ice_Time, "ice_time", start, end, ice_type_ids=self.GROUP_SESSION_IDS)
+            practice = max(ice - coach - group, 0)
 
             # Competition flag
             with self._get_session() as s:
@@ -174,6 +183,7 @@ class SkaterAggregates:
 
             data["months"].append(month_name)
             data["ice_time"].append(minutes_to_hours_float(ice))
+            data["practice"].append(minutes_to_hours_float(practice))
             data["coach_time"].append(minutes_to_hours_float(coach))
             data["group_sessions"].append(minutes_to_hours_float(group))
             data["competitions"].append(comp_flag)
@@ -230,11 +240,54 @@ class UserMeta:
         return profile.coach_id if profile else None
 
     def to_dict(self):
-        profile = self.skater_profile()
-        if not profile:
-            return {}
+        with self._get_session() as s:
+            row = (
+                s.query(
+                    uSkaterConfig,
+                    Locations.rink_name,
+                    Coaches.coach_Fname,
+                    Coaches.coach_Lname,
+                    Club_Directory.club_name,
+                )
+                .outerjoin(Locations, uSkaterConfig.uSkaterRinkPref == Locations.rink_id)
+                .outerjoin(Coaches, uSkaterConfig.activeCoach == Coaches.coach_id)
+                .outerjoin(Club_Directory, uSkaterConfig.org_Club == Club_Directory.club_id)
+                .filter(uSkaterConfig.uSkaterUUID == self.uSkaterUUID)
+                .first()
+            )
+
+            if not row:
+                return {}
+
+            profile = row[0]
+
+            coach_name = None
+            if row.coach_Fname or row.coach_Lname:
+                coach_name = f"{row.coach_Fname or ''} {row.coach_Lname or ''}".strip()
+
+            ice_config = None
+            if profile.uSkaterComboIce:
+                equip = (
+                    s.query(
+                        uSkaterBoots.bootsName,
+                        uSkaterBoots.bootsModel,
+                        uSkaterBlades.bladesName,
+                        uSkaterBlades.bladesModel,
+                    )
+                    .select_from(uSkateConfig)
+                    .join(uSkaterBoots, uSkateConfig.uSkaterBootsID == uSkaterBoots.bootsID)
+                    .join(uSkaterBlades, uSkateConfig.uSkaterBladesID == uSkaterBlades.bladesID)
+                    .filter(uSkateConfig.sConfigID == profile.uSkaterComboIce)
+                    .first()
+                )
+                if equip:
+                    boots = f"{equip.bootsName or ''} {equip.bootsModel or ''}".strip()
+                    blades = f"{equip.bladesName or ''} {equip.bladesModel or ''}".strip()
+                    parts = [p for p in (boots, blades) if p]
+                    ice_config = " / ".join(parts)
+
         return {
-            'date_created':  profile.date_created,
+            'date_created': profile.date_created,
             'uSkaterUUID': profile.uSkaterUUID,
             'uSkaterFname': profile.uSkaterFname,
             'uSkaterMname': profile.uSkaterMname,
@@ -245,14 +298,14 @@ class UserMeta:
             'uSkaterCountry': profile.uSkaterCountry,
             'uSkaterTZ': profile.uSkaterTZ,
             'uSkaterRoles': profile.uSkaterRoles,
-            'uSkaterComboIce': profile.uSkaterComboIce,
+            'uSkaterComboIce': ice_config,
             'uSkaterComboOff': profile.uSkaterComboOff,
-            'uSkaterRinkPref': profile.uSkaterRinkPref,
+            'uSkaterRinkPref': row.rink_name,
             'uSkaterMaintPref': profile.uSkaterMaintPref,
-            'activeCoach': profile.activeCoach,
-            'org_Club': profile.org_Club,
+            'activeCoach': coach_name,
+            'org_Club': row.club_name,
             'org_Club_Join_Date': profile.org_Club_Join_Date,
-            'org_USFSA_number':profile.org_USFSA_number
+            'org_USFSA_number': profile.org_USFSA_number
         }
 
 

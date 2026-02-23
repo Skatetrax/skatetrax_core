@@ -3,13 +3,14 @@ from uuid import UUID as PyUUID
 from datetime import datetime, date, timezone, timedelta
 from unittest.mock import patch
 
-from skatetrax.models.ops.data_aggregates import SkaterAggregates, uMaintenanceV4
+from skatetrax.models.ops.data_aggregates import SkaterAggregates, uMaintenanceV4, UserMeta
 from skatetrax.models.t_ice_time import Ice_Time
 from skatetrax.models.t_maint import uSkaterMaint
 
 from tests.conftest import (
-    NEW_USER_UUID, NEW_CONFIG_UUID, NEW_BLADE_UUID,
-    TEST_RINK_UUID, TEST_COACH_UUID, NO_COACH_UUID,
+    NEW_USER_UUID, NEW_CONFIG_UUID, NEW_BLADE_UUID, NEW_BOOT_UUID,
+    TEST_RINK_UUID, TEST_COACH_UUID, NO_COACH_UUID, NO_CLUB_UUID,
+    OFF_ICE_RINK_UUID,
     FREESTYLE_WALKON_UUID, GROUP_CLASS_UUID, PUBLIC_UUID,
 )
 
@@ -34,7 +35,6 @@ class TestNewUserAllZeros:
 
     def test_group_time_total_zero(self, seeded_session):
         sa = SkaterAggregates(NEW_USER_UUID, session=seeded_session)
-        sa.GROUP_SESSION_IDS = [GROUP_CLASS_UUID]
         result = sa.group_time("total")
         assert result == {'hours': 0, 'minutes': 0}
 
@@ -125,9 +125,30 @@ class TestKnownSessionData:
         seeded_session.flush()
 
         sa = SkaterAggregates(NEW_USER_UUID, session=seeded_session)
-        sa.GROUP_SESSION_IDS = [GROUP_CLASS_UUID]
         group = sa.group_time("total")
         assert group == {'hours': 1, 'minutes': 0.0}
+
+    def test_practice_excludes_coached_and_group(self, seeded_session):
+        _add_session(seeded_session, datetime(2026, 1, 10), 45, 30, 42,
+                     skate_type=FREESTYLE_WALKON_UUID)
+        _add_session(seeded_session, datetime(2026, 1, 12), 45, 30, 42,
+                     skate_type=FREESTYLE_WALKON_UUID)
+        _add_session(seeded_session, datetime(2026, 1, 14), 60, 0, 0,
+                     skate_type=GROUP_CLASS_UUID)
+        seeded_session.flush()
+
+        sa = SkaterAggregates(NEW_USER_UUID, session=seeded_session)
+        # total=150, coached=60, group=60 → practice=30
+        result = sa.practice("total")
+        assert result == {'hours': 0, 'minutes': 30.0}
+
+    def test_practice_zero_when_all_coached(self, seeded_session):
+        _add_session(seeded_session, datetime(2026, 1, 10), 60, 60, 42)
+        seeded_session.flush()
+
+        sa = SkaterAggregates(NEW_USER_UUID, session=seeded_session)
+        result = sa.practice("total")
+        assert result == {'hours': 0, 'minutes': 0.0}
 
     def test_ice_cost_sums(self, seeded_session):
         _add_session(seeded_session, datetime(2026, 1, 10), 60, 0, 0, ice_cost=12.50)
@@ -213,3 +234,42 @@ class TestResolveTimeframe:
         sa = SkaterAggregates(NEW_USER_UUID, session=seeded_session)
         result = sa.skated("total")
         assert result == {'hours': 1, 'minutes': 30.0}
+
+
+# ---------------------------------------------------------------------------
+# UserMeta.to_dict -- UUID resolution via joins
+# ---------------------------------------------------------------------------
+class TestUserMetaToDict:
+
+    def test_returns_empty_for_unknown_user(self, seeded_session):
+        from uuid import uuid4
+        um = UserMeta(uuid4(), session=seeded_session)
+        assert um.to_dict() == {}
+
+    def test_resolves_rink_name(self, seeded_session):
+        um = UserMeta(NEW_USER_UUID, session=seeded_session)
+        result = um.to_dict()
+        assert result['uSkaterRinkPref'] == "Off Ice"
+
+    def test_resolves_coach_name(self, seeded_session):
+        um = UserMeta(NEW_USER_UUID, session=seeded_session)
+        result = um.to_dict()
+        assert result['activeCoach'] == "- -"
+
+    def test_resolves_club_name(self, seeded_session):
+        um = UserMeta(NEW_USER_UUID, session=seeded_session)
+        result = um.to_dict()
+        assert result['org_Club'] == "No Club"
+
+    def test_resolves_ice_config(self, seeded_session):
+        um = UserMeta(NEW_USER_UUID, session=seeded_session)
+        result = um.to_dict()
+        assert result['uSkaterComboIce'] == "Generic Rental / Generic Rental"
+
+    def test_basic_fields_present(self, seeded_session):
+        um = UserMeta(NEW_USER_UUID, session=seeded_session)
+        result = um.to_dict()
+        assert result['uSkaterFname'] == "New"
+        assert result['uSkaterLname'] == "Skater"
+        assert result['uSkaterCity'] == "Testville"
+        assert result['uSkaterMaintPref'] == 21

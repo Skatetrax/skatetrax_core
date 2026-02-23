@@ -21,6 +21,13 @@ def _convert_dates(df, columns, tz):
     return df
 
 
+def _resolve_tz(row_tz, fallback):
+    """Return row_tz when it's a real string, otherwise fallback."""
+    if pd.notna(row_tz) and isinstance(row_tz, str):
+        return row_tz
+    return fallback
+
+
 session = Session()
 
 
@@ -102,18 +109,20 @@ class Sessions_Tables():
                 Locations.rink_tz,
                 )
             .where(Ice_Time.uSkaterUUID == uSkaterUUID)
-            .join(Locations, Ice_Time.rink_id == Locations.rink_id)
-            .join(IceType, Ice_Time.skate_type == IceType.ice_type_id)
-            .join(Coaches, Ice_Time.coach_id == Coaches.uSkaterUUID)
+            .outerjoin(Locations, Ice_Time.rink_id == Locations.rink_id)
+            .outerjoin(IceType, Ice_Time.skate_type == IceType.ice_type_id)
+            .outerjoin(Coaches, Ice_Time.coach_id == Coaches.coach_id)
+            .order_by(Ice_Time.date.desc())
             .statement, con=engine
         )
 
         df['coach'] = df['coach_Fname'].fillna('') + ' ' + df['coach_Lname'].fillna('')
         df = df.drop(columns=['coach_Fname', 'coach_Lname'])
 
-        if tz or df.get('rink_tz') is not None:
+        if not df.empty and (tz or 'rink_tz' in df.columns):
             df['date'] = df.apply(
-                lambda row: utc_to_local(row['date'], row.get('rink_tz') or tz),
+                lambda row: utc_to_local(row['date'], _resolve_tz(row.get('rink_tz'), tz))
+                    if _resolve_tz(row.get('rink_tz'), tz) else row['date'],
                 axis=1
             )
         df = df.drop(columns=['rink_tz'], errors='ignore')
@@ -147,18 +156,20 @@ class Sessions_Tables():
             .where(Ice_Time.uSkaterUUID == uSkaterUUID)
             .filter(Ice_Time.date >= tl['last'])
             .filter(Ice_Time.date <= tl['first'])
-            .join(Locations, Ice_Time.rink_id == Locations.rink_id)
-            .join(IceType, Ice_Time.skate_type == IceType.ice_type_id)
-            .join(Coaches, Ice_Time.coach_id == Coaches.uSkaterUUID)
+            .outerjoin(Locations, Ice_Time.rink_id == Locations.rink_id)
+            .outerjoin(IceType, Ice_Time.skate_type == IceType.ice_type_id)
+            .outerjoin(Coaches, Ice_Time.coach_id == Coaches.coach_id)
+            .order_by(Ice_Time.date.desc())
             .statement, con=engine
         )
 
         df['coach'] = df['coach_Fname'].fillna('') + ' ' + df['coach_Lname'].fillna('')
         df = df.drop(columns=['coach_Fname', 'coach_Lname'])
 
-        if tz or df.get('rink_tz') is not None:
+        if not df.empty and (tz or 'rink_tz' in df.columns):
             df['date'] = df.apply(
-                lambda row: utc_to_local(row['date'], row.get('rink_tz') or tz),
+                lambda row: utc_to_local(row['date'], _resolve_tz(row.get('rink_tz'), tz))
+                    if _resolve_tz(row.get('rink_tz'), tz) else row['date'],
                 axis=1
             )
         df = df.drop(columns=['rink_tz'], errors='ignore')
