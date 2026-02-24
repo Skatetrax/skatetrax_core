@@ -1,0 +1,25 @@
+# Memberships, punch cards, and classes
+# uSkaterUUID is injected from auth.yaml at load time
+# All sections are optional -- only include what applies.
+
+club_memberships:
+  - club_id: "REPLACE_WITH_CLUB_UUID"
+    joined_date: "2026-01-01 00:00:00"
+    expiration_date: "2026-06-30 00:00:00"
+    membership_fee: 150.00
+
+punch_cards:
+  - card_type: "0bcb0d7a-f5f0-41e2-bccb-78e80eb6673f"    # Free Style (Punch Card)
+    card_cost: 80
+    punches_total: 10
+    punch_session_minutes: 0
+    purchase_date: "2026-01-01 00:00:00"
+    expiration_date: null
+    rink_id: "REPLACE_WITH_RINK_UUID"
+
+lts_classes:
+  - location_id: "REPLACE_WITH_RINK_UUID"
+    class_cost: 120
+    class_name: "Learn to Skate - Adult"
+    date_start: "2026-01-06 00:00:00"
+    date_end: "2026-02-24 00:00:00"

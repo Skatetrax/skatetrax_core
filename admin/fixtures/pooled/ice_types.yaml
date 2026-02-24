@@ -1,0 +1,31 @@
+# Ice session types -- system-wide, loaded during setup
+# These map to the ice_type table and are referenced by ice_time.skate_type
+- ice_type_id: "dc812842-a9a9-4902-b680-361420baffe5"
+  ice_type: "Free Style (Walk On)"
+
+- ice_type_id: "cedbb4e9-ab5b-4a14-a273-fd9783aaac86"
+  ice_type: "Public"
+
+- ice_type_id: "12208eeb-9ffe-4ac3-90d3-976741a34249"
+  ice_type: "Coaching Session"
+
+- ice_type_id: "7a3b3441-04d6-4b5a-afb6-eb556022c2e7"
+  ice_type: "Competition"
+
+- ice_type_id: "88f87085-927d-4b77-b1c9-77d6de7c2d28"
+  ice_type: "Performance"
+
+- ice_type_id: "e48d17a7-d092-4320-8e5b-6670d57b104b"
+  ice_type: "Club Ice"
+
+- ice_type_id: "db32094e-9b0d-42a5-b87f-cd47729b6c65"
+  ice_type: "Group Class"
+
+- ice_type_id: "0bcb0d7a-f5f0-41e2-bccb-78e80eb6673f"
+  ice_type: "Free Style (Punch Card)"
+
+- ice_type_id: "a2250306-a238-4ff3-b772-ae86cbda0d7c"
+  ice_type: "Off Ice - Concrete or Asphalt"
+
+- ice_type_id: "43cae2d2-909c-47a1-ac7d-a1a923c25d4e"
+  ice_type: "Off Ice - Rink"

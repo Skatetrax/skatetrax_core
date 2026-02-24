@@ -1,0 +1,12 @@
+# Auth credentials for sparkles
+# Copy this file to auth.yaml and fill in real values before running restore.
+#
+#   cp auth.yaml.sample auth.yaml
+#
+# auth.yaml is gitignored -- never commit real passwords.
+
+aLogin: "sparkles"
+password: "CHANGE_ME"
+aEmail: "your-email@example.com"
+phone_number: "0000000000"
+uSkaterUUID: "d194b837-3e2f-43fe-8876-f1febcdd7ba9"

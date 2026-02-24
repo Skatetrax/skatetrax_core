@@ -1,0 +1,22 @@
+[project]
+name = "skatetrax-core"
+version = "0.1.0"
+description = "Core logic for Skatetrax"
+authors = [{ name = "Ashley L Young", email = "burning.rose85@gmail.com" }]
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "sqlalchemy",
+    "psycopg2",
+    "pandas",
+    "marshmallow",
+    "Werkzeug"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["skatetrax*"]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
