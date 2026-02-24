@@ -13,7 +13,13 @@ def get_engine():
         db_name = os.environ.get('PGDB_NAME')
         db_user = os.environ.get('PGDB_USER')
         passwd = os.environ.get('PGDB_PASSWORD')
-        _engine = create_engine(f'postgresql://{db_user}:{passwd}@{db_url}/{db_name}')
+        _engine = create_engine(
+            f'postgresql://{db_user}:{passwd}@{db_url}/{db_name}',
+            pool_size=3,
+            max_overflow=2,
+            pool_pre_ping=True,
+            pool_recycle=300,
+        )
     return _engine
 
 
