@@ -1,7 +1,7 @@
 import pandas as pd
 from sqlalchemy import func
 
-from ..cyberconnect2 import Session, engine
+from ..cyberconnect2 import create_session, get_engine
 
 from ...utils.common import Timelines
 from ...utils.tz import utc_to_local
@@ -31,9 +31,6 @@ def _resolve_tz(row_tz, fallback):
     return fallback
 
 
-session = Session()
-
-
 class Equipment():
 
     def skate_configs(uSkaterUUID):
@@ -43,7 +40,7 @@ class Equipment():
         '''
 
         df = pd.read_sql_query(
-            sql=Session().query(
+            sql=create_session().query(
                 uSkateConfig.sConfigID,
                 uSkateConfig.date_created,
                 uSkateConfig.sActiveFlag,
@@ -55,20 +52,20 @@ class Equipment():
             .where(uSkateConfig.uSkaterUUID == uSkaterUUID)
             .join(uSkaterBoots, uSkateConfig.uSkaterBootsID == uSkaterBoots.bootsID)
             .join(uSkaterBlades, uSkateConfig.uSkaterBladesID == uSkaterBlades.bladesID)
-            .statement, con=engine
+            .statement, con=get_engine()
         )
 
         if df.empty:
             return df
 
         hours_df = pd.read_sql_query(
-            sql=Session().query(
+            sql=create_session().query(
                 Ice_Time.uSkaterConfig.label('sConfigID'),
                 func.coalesce(func.sum(Ice_Time.ice_time), 0).label('hours')
                 )
             .filter(Ice_Time.uSkaterUUID == uSkaterUUID)
             .group_by(Ice_Time.uSkaterConfig)
-            .statement, con=engine
+            .statement, con=get_engine()
         )
 
         df = df.merge(hours_df, on='sConfigID', how='left')
@@ -81,7 +78,7 @@ class Equipment():
     def boots(uSkaterUUID):
         '''Lists all boots for a skater with hours skated per boot.'''
         df = pd.read_sql_query(
-            sql=Session().query(
+            sql=create_session().query(
                 uSkaterBoots.bootsID,
                 uSkaterBoots.date_created,
                 uSkaterBoots.bootsName,
@@ -90,21 +87,21 @@ class Equipment():
                 uSkaterBoots.bootsPurchaseAmount,
                 )
             .where(uSkaterBoots.uSkaterUUID == uSkaterUUID)
-            .statement, con=engine
+            .statement, con=get_engine()
         )
 
         if df.empty:
             return df
 
         hours_df = pd.read_sql_query(
-            sql=Session().query(
+            sql=create_session().query(
                 uSkateConfig.uSkaterBootsID.label('bootsID'),
                 func.coalesce(func.sum(Ice_Time.ice_time), 0).label('hours')
                 )
             .join(Ice_Time, Ice_Time.uSkaterConfig == uSkateConfig.sConfigID)
             .filter(uSkateConfig.uSkaterUUID == uSkaterUUID)
             .group_by(uSkateConfig.uSkaterBootsID)
-            .statement, con=engine
+            .statement, con=get_engine()
         )
 
         df = df.merge(hours_df, on='bootsID', how='left')
@@ -117,7 +114,7 @@ class Equipment():
     def blades(uSkaterUUID):
         '''Lists all blades for a skater with sharpening count per blade.'''
         df = pd.read_sql_query(
-            sql=Session().query(
+            sql=create_session().query(
                 uSkaterBlades.bladesID,
                 uSkaterBlades.date_created,
                 uSkaterBlades.bladesName,
@@ -126,20 +123,20 @@ class Equipment():
                 uSkaterBlades.bladesPurchaseAmount,
                 )
             .where(uSkaterBlades.uSkaterUUID == uSkaterUUID)
-            .statement, con=engine
+            .statement, con=get_engine()
         )
 
         if df.empty:
             return df
 
         maint_df = pd.read_sql_query(
-            sql=Session().query(
+            sql=create_session().query(
                 uSkaterMaint.uSkaterBladesID.label('bladesID'),
                 func.count(uSkaterMaint.id).label('sharpenings')
                 )
             .filter(uSkaterMaint.uSkaterUUID == uSkaterUUID)
             .group_by(uSkaterMaint.uSkaterBladesID)
-            .statement, con=engine
+            .statement, con=get_engine()
         )
 
         df = df.merge(maint_df, on='bladesID', how='left')
@@ -158,10 +155,10 @@ class Sessions_Tables():
         '''
 
         df = pd.read_sql_query(
-            sql=Session().query(
+            sql=create_session().query(
                     IceType
                 )
-            .statement, con=engine
+            .statement, con=get_engine()
         )
     
         return df
@@ -178,7 +175,7 @@ class Sessions_Tables():
         '''
 
         df = pd.read_sql_query(
-            sql=Session().query(
+            sql=create_session().query(
                 Ice_Time.date,
                 Ice_Time.ice_time,
                 Ice_Time.ice_cost,
@@ -197,7 +194,7 @@ class Sessions_Tables():
             .outerjoin(IceType, Ice_Time.skate_type == IceType.ice_type_id)
             .outerjoin(Coaches, Ice_Time.coach_id == Coaches.coach_id)
             .order_by(Ice_Time.date.desc())
-            .statement, con=engine
+            .statement, con=get_engine()
         )
 
         df['coach'] = df['coach_Fname'].fillna('') + ' ' + df['coach_Lname'].fillna('')
@@ -223,7 +220,7 @@ class Sessions_Tables():
         tl = Timelines.current_month(tz=tz)
 
         df = pd.read_sql_query(
-            sql=Session().query(
+            sql=create_session().query(
                 Ice_Time.date,
                 Ice_Time.ice_time,
                 Ice_Time.ice_cost,
@@ -244,7 +241,7 @@ class Sessions_Tables():
             .outerjoin(IceType, Ice_Time.skate_type == IceType.ice_type_id)
             .outerjoin(Coaches, Ice_Time.coach_id == Coaches.coach_id)
             .order_by(Ice_Time.date.desc())
-            .statement, con=engine
+            .statement, con=get_engine()
         )
 
         df['coach'] = df['coach_Fname'].fillna('') + ' ' + df['coach_Lname'].fillna('')
@@ -267,7 +264,7 @@ class Sessions_Tables():
         '''
 
         df = pd.read_sql_query(
-            sql=Session()
+            sql=create_session()
             .query(
                 uSkateConfig.date_created,
                 uSkaterBoots.bootsName,
@@ -281,7 +278,7 @@ class Sessions_Tables():
                 )
             .join(uSkaterBoots, uSkateConfig.uSkaterBootsID == uSkaterBoots.bootsID)
             .join(uSkaterBlades, uSkateConfig.uSkaterBladesID == uSkaterBlades.bladesID)
-            .statement, con=engine
+            .statement, con=get_engine()
         )
 
         return df
@@ -297,10 +294,10 @@ class Skating_Locations():
         '''
 
         df = pd.read_sql_query(
-            sql=Session().query(
+            sql=create_session().query(
                 Locations
                 )
-            .statement, con=engine
+            .statement, con=get_engine()
         )
 
         return df
@@ -317,7 +314,7 @@ class CoachesTable():
         '''
         
         df = pd.read_sql_query(
-            sql=Session().query(
+            sql=create_session().query(
                 Coaches.coach_id,
                 Coaches.coach_Fname,
                 Coaches.coach_Lname,
@@ -325,7 +322,7 @@ class CoachesTable():
                 Coaches.coach_usfsa_id,
                 Coaches.coach_ijs_id
                 )
-            .statement, con=engine
+            .statement, con=get_engine()
         )
     
         return df
