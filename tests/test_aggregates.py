@@ -284,7 +284,7 @@ class TestUserMetaToDict:
 class TestEquipmentConfigActive:
 
     def test_returns_boot_blade_names(self, seeded_session):
-        with patch("skatetrax.models.ops.data_aggregates.Session", return_value=seeded_session):
+        with patch("skatetrax.models.ops.data_aggregates.create_session", return_value=seeded_session):
             result = Equipment.config_active(NEW_USER_UUID)
         assert result is not None
         assert result['bootsName'] == "Generic"
@@ -294,7 +294,7 @@ class TestEquipmentConfigActive:
 
     def test_returns_none_for_unknown_user(self, seeded_session):
         from uuid import uuid4
-        with patch("skatetrax.models.ops.data_aggregates.Session", return_value=seeded_session):
+        with patch("skatetrax.models.ops.data_aggregates.create_session", return_value=seeded_session):
             result = Equipment.config_active(uuid4())
         assert result is None
 

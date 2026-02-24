@@ -4,7 +4,7 @@ from uuid import UUID as PyUUID
 import calendar
 
 
-from ...models.cyberconnect2 import Session
+from ...models.cyberconnect2 import create_session
 from ...utils.timeframe_generator import TIMEFRAMES
 from ...utils.common import minutes_to_hours, currency_usd
 from ...utils.tz import today_in_tz, utc_to_local, resolve_tz
@@ -35,7 +35,7 @@ class SkaterAggregates:
 
 
     def _get_session(self):
-        return self.external_session or Session()
+        return self.external_session or create_session()
 
 
     def aggregate(self, model, field, start_date=None, end_date=None, ice_type_ids=None):
@@ -245,7 +245,7 @@ class Equipment():
 
     def config_active(uSkaterUUID):
         """Return boot/blade details for the skater's active ice config."""
-        with Session() as s:
+        with create_session() as s:
             config_id = (
                 s.query(uSkaterConfig.uSkaterComboIce)
                 .filter(uSkaterConfig.uSkaterUUID == uSkaterUUID)
@@ -276,7 +276,7 @@ class UserMeta:
         self.external_session = session
 
     def _get_session(self):
-        return self.external_session or Session()
+        return self.external_session or create_session()
 
     def skater_profile(self):
         from ..t_skaterMeta import uSkaterConfig
@@ -382,7 +382,7 @@ class uMaintenanceV4:
         self.tz = tz
 
     def _get_session(self):
-        return self.external_session or Session()
+        return self.external_session or create_session()
 
     @currency_usd
     def maint_cost(self):

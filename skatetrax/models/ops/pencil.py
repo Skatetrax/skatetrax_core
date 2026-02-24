@@ -1,7 +1,7 @@
 from sqlalchemy import func
 from datetime import datetime
 
-from ..cyberconnect2 import Session, engine
+from ..cyberconnect2 import create_session
 
 from ..t_auth import uAuthTable
 
@@ -16,166 +16,162 @@ from ..t_memberships import Club_Directory, Club_Members
 
 from ..t_skaterMeta import uSkaterConfig, uSkaterRoles
 
-session = Session()
-
-
 class Coach_Data():
 
     def add_coaches(coaches):
-        for coach in coaches:
-            try:
-                session.add(Coaches(**coach))
-                session.commit()
-            except Exception as why:
-                session.rollback()
-                print(why)
-        session.close()
+        with create_session() as session:
+            for coach in coaches:
+                try:
+                    session.add(Coaches(**coach))
+                    session.commit()
+                except Exception as why:
+                    session.rollback()
+                    print(why)
 
 
 class Equipment_Data():
 
     def add_blades(blades):
-        for blade in blades:
-            try:
-                session.add(uSkaterBlades(**blade))
-                session.commit()
-            except Exception as why:
-                session.rollback()
-                print(why)
-        session.close()
+        with create_session() as session:
+            for blade in blades:
+                try:
+                    session.add(uSkaterBlades(**blade))
+                    session.commit()
+                except Exception as why:
+                    session.rollback()
+                    print(why)
 
     def add_boots(boots):
-        for boot in boots:
-            try:
-                session.add(uSkaterBoots(**boot))
-                session.commit()
-            except Exception as why:
-                session.rollback()
-                print(why)
-        session.close()
+        with create_session() as session:
+            for boot in boots:
+                try:
+                    session.add(uSkaterBoots(**boot))
+                    session.commit()
+                except Exception as why:
+                    session.rollback()
+                    print(why)
 
     def add_combo(configs):
-        for config in configs:
-            try:
-                session.add(uSkateConfig(**config))
-                session.commit()
-            except Exception as why:
-                session.rollback()
-                print(why)
-        session.close()
+        with create_session() as session:
+            for config in configs:
+                try:
+                    session.add(uSkateConfig(**config))
+                    session.commit()
+                except Exception as why:
+                    session.rollback()
+                    print(why)
 
     def add_maintenance(maint_sess):
-        for maint in maint_sess:
-            try:
-                session.add(uSkaterMaint(**maint))
-                session.commit()
-            except Exception as why:
-                session.rollback()
-                print(why)
-        session.close()
+        with create_session() as session:
+            for maint in maint_sess:
+                try:
+                    session.add(uSkaterMaint(**maint))
+                    session.commit()
+                except Exception as why:
+                    session.rollback()
+                    print(why)
 
 
 class Ice_Session():
 
     def add_skate_time(sessions):
-        for asession in sessions:
-            try:
-                session.add(Ice_Time(**asession))
-                session.commit()
-            except Exception as why:
-                session.rollback()
-                print(why)
-        session.close()
+        with create_session() as session:
+            for asession in sessions:
+                try:
+                    session.add(Ice_Time(**asession))
+                    session.commit()
+                except Exception as why:
+                    session.rollback()
+                    print(why)
 
     def add_skate_school(classes):
-        for aclass in classes:
-            try:
-                session.add(Skate_School(**aclass))
-                session.commit()
-            except Exception as why:
-                session.rollback()
-                print(why)
-        session.close()
+        with create_session() as session:
+            for aclass in classes:
+                try:
+                    session.add(Skate_School(**aclass))
+                    session.commit()
+                except Exception as why:
+                    session.rollback()
+                    print(why)
 
 
 class Location_Data():
 
     def add_ice_type(types):
-        for ice_type in types:
-            try:
-                session.add(IceType(**ice_type))
-                session.commit()
-            except Exception as why:
-                session.rollback()
-                print(why)
-        session.close()
+        with create_session() as session:
+            for ice_type in types:
+                try:
+                    session.add(IceType(**ice_type))
+                    session.commit()
+                except Exception as why:
+                    session.rollback()
+                    print(why)
 
     def add_ice_rink(rinks):
-        for rink in rinks:
-            try:
-                session.add(Locations(**rink))
-                session.commit()
-            except Exception as why:
-                session.rollback()
-                print(why)
-        session.close()
-        
+        with create_session() as session:
+            for rink in rinks:
+                try:
+                    session.add(Locations(**rink))
+                    session.commit()
+                except Exception as why:
+                    session.rollback()
+                    print(why)
+
     def add_punchcard(cards):
-        for card in cards:
-            try:
-                session.add(Punch_cards(**card))
-                session.commit()
-            except Exception as why:
-                session.rollback()
-                print(why)
-        session.close()
+        with create_session() as session:
+            for card in cards:
+                try:
+                    session.add(Punch_cards(**card))
+                    session.commit()
+                except Exception as why:
+                    session.rollback()
+                    print(why)
 
 
 class User_Data():
 
     def add_skater(skater_data):
-        for data in skater_data:
-            try:
-                session.add(uSkaterConfig(**data))
-                session.commit()
-            except Exception as why:
-                session.rollback()
-                print(why)
-        session.close()
+        with create_session() as session:
+            for data in skater_data:
+                try:
+                    session.add(uSkaterConfig(**data))
+                    session.commit()
+                except Exception as why:
+                    session.rollback()
+                    print(why)
 
     def add_skater_roles(role_data):
-        for data in role_data:
-            try:
-                session.add(uSkaterRoles(**data))
-                session.commit()
-            except Exception as why:
-                session.rollback()
-                print(why)
-        session.close()
-        
+        with create_session() as session:
+            for data in role_data:
+                try:
+                    session.add(uSkaterRoles(**data))
+                    session.commit()
+                except Exception as why:
+                    session.rollback()
+                    print(why)
+
 
 class Club_Data():
-    
+
     def add_club(club_data):
-        for data in club_data:
-            try:
-                session.add(Club_Directory(**data))
-                session.commit()
-            except Exception as why:
-                session.rollback()
-                print(why)
-        session.close()
-        
+        with create_session() as session:
+            for data in club_data:
+                try:
+                    session.add(Club_Directory(**data))
+                    session.commit()
+                except Exception as why:
+                    session.rollback()
+                    print(why)
 
     def add_member(member_data):
-        for data in member_data:
-            try:
-                session.add(Club_Members(**data))
-                session.commit()
-            except Exception as why:
-                session.rollback()
-                print(why)
-        session.close()
+        with create_session() as session:
+            for data in member_data:
+                try:
+                    session.add(Club_Members(**data))
+                    session.commit()
+                except Exception as why:
+                    session.rollback()
+                    print(why)
         
 ### Incoming Changes from Legacy
 
