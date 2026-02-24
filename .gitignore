@@ -6,6 +6,7 @@ __pycache__/
 # Local Dev Stuff
 assets/
 notes/
+cookies.txt
 
 # Admin tool -- real data contains PII (coach contacts, personal info, etc.)
 # Only sample/template files should be committed.
