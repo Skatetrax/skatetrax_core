@@ -1,5 +1,6 @@
-from sqlalchemy import Column, String, Integer, DateTime, UUID, text
+from sqlalchemy import Column, String, Integer, DateTime, UUID, ForeignKey, text
 from sqlalchemy.dialects.postgresql import JSONB
+from datetime import datetime, timezone
 
 from .base import Base
 
@@ -18,7 +19,7 @@ class uSkaterConfig(Base):
     id = Column(Integer, primary_key=True)
     
     # who meta
-    date_created = Column(DateTime)
+    date_created = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     uSkaterUUID = Column(UUID, unique=True)
     uSkaterFname = Column(String)
     uSkaterMname = Column(String)
@@ -27,6 +28,7 @@ class uSkaterConfig(Base):
     uSkaterCity = Column(String)
     uSkaterState = Column(String)
     uSkaterCountry = Column(String)
+    uSkaterTZ = Column(String, default='UTC')
     uSkaterRoles = Column(JSONB, nullable=False, server_default=text("'[]'::jsonb"))
     
     #equip configs
@@ -37,7 +39,7 @@ class uSkaterConfig(Base):
     
     #training meta
     activeCoach = Column(UUID)
-    org_Club = Column(UUID)
+    org_Club = Column(UUID, ForeignKey("club_directory.club_id"))
     org_Club_Join_Date = Column(DateTime)
     org_USFSA_number = Column(Integer)
 
@@ -52,15 +54,16 @@ class uSkaterConfig(Base):
         uSkaterCity,
         uSkaterState,
         uSkaterCountry,
-        uSkaterRoles,
         uSkaterComboIce,
         uSkaterComboOff,
         uSkaterRinkPref,
         uSkaterMaintPref,
         activeCoach,
-        org_Club_Name,
+        org_Club,
         org_Club_Join_Date,
-        org_USFSA_number
+        org_USFSA_number,
+        uSkaterTZ='UTC',
+        uSkaterRoles=None
             ):
 
         self.date_created = date_created
@@ -72,15 +75,16 @@ class uSkaterConfig(Base):
         self.uSkaterCity = uSkaterCity
         self.uSkaterState = uSkaterState
         self.uSkaterCountry = uSkaterCountry
-        self.uSkaterRoles = uSkaterRoles
         self.uSkaterComboIce = uSkaterComboIce
         self.uSkaterComboOff = uSkaterComboOff
         self.uSkaterRinkPref = uSkaterRinkPref
         self.uSkaterMaintPref = uSkaterMaintPref
         self.activeCoach = activeCoach
-        self.org_Club_Name = org_Club_Name
+        self.org_Club = org_Club
         self.org_Club_Join_Date = org_Club_Join_Date
         self.org_USFSA_number = org_USFSA_number
+        self.uSkaterTZ = uSkaterTZ
+        self.uSkaterRoles = uSkaterRoles
 
 
 class uSkaterRoles(Base):

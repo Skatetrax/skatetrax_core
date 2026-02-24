@@ -1,0 +1,12 @@
+# Auth credentials for inara
+# Copy this file to auth.yaml and fill in real values before running restore.
+#
+#   cp auth.yaml.sample auth.yaml
+#
+# auth.yaml is gitignored -- never commit real passwords.
+
+aLogin: "inara"
+password: "CHANGE_ME"
+aEmail: "inara@example.com"
+phone_number: null
+uSkaterUUID: "9461aff8-c20e-443e-954f-393038c14603"

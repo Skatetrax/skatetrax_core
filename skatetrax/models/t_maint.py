@@ -19,6 +19,8 @@ class uSkaterMaint(Base):
     m_location = Column(UUID)
     m_notes = Column(String, nullable=True)
     m_roh = Column(String, nullable=True)
+    m_pref_hours = Column(Float, nullable=True)  # preferred maintenance cycle hours at the time
+    uSkaterBladesID = Column(UUID, ForeignKey("uSkaterBlades.bladesID", ondelete='CASCADE'), nullable=True)
     uSkaterConfig = Column(UUID, ForeignKey("uSkateConfig.sConfigID", ondelete='CASCADE'))
     uSkaterUUID = Column(UUID, ForeignKey("uSkaterConfig.uSkaterUUID", ondelete='CASCADE'))
 
@@ -30,6 +32,8 @@ class uSkaterMaint(Base):
         m_location,
         m_notes,
         m_roh,
+        m_pref_hours,
+        uSkaterBladesID,
         uSkateConfig,
         uSkaterUUID,
             ):
@@ -40,5 +44,7 @@ class uSkaterMaint(Base):
         self.m_location = m_location
         self.m_notes = m_notes
         self.m_roh = m_roh
+        self.m_pref_hours = m_pref_hours
+        self.uSkaterBladesID = uSkaterBladesID
         self.uSkateConfig = uSkateConfig
         self.uSkaterUUID = uSkaterUUID

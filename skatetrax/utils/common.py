@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from .tz import today_in_tz
 
 
 def currency_usd(func):
@@ -33,9 +34,9 @@ def minutes_to_hours(func):
 
 class Timelines():
 
-    def current_month():
-        today = date.today()
-        start_day = date.today().replace(day=1) - timedelta()
+    def current_month(tz=None):
+        today = today_in_tz(tz)
+        start_day = today.replace(day=1) - timedelta()
 
         date_range = {
             'first': today.strftime("%Y-%m-%d"),
@@ -44,10 +45,11 @@ class Timelines():
 
         return date_range
 
-    def last_month():
-        last_month_last_day = date.today().replace(day=1) - timedelta(days=1)
+    def last_month(tz=None):
+        today = today_in_tz(tz)
+        last_month_last_day = today.replace(day=1) - timedelta(days=1)
         last_month_first_day = (
-            date.today().replace(day=1)
+            today.replace(day=1)
             - timedelta(days=last_month_last_day.day)
                 )
 
@@ -58,8 +60,8 @@ class Timelines():
 
         return date_range
 
-    def last_3m():
-        today = date.today()
+    def last_3m(tz=None):
+        today = today_in_tz(tz)
         past_3m = today - timedelta(weeks=12)
         past_3m_start = past_3m.replace(day=1)
 

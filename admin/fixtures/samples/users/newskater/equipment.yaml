@@ -1,0 +1,29 @@
+# Equipment -- uSkaterUUID is injected from auth.yaml at load time
+# A minimal setup: one boot, one blade, one config.
+# Generate UUIDs: python -c "from uuid import uuid4; print(uuid4())"
+
+boots:
+  - bootsID: "REPLACE_WITH_UUID"
+    date_created: "2026-01-01"
+    bootsName: "Jackson"
+    bootsModel: "Freestyle"
+    bootsSize: "8"
+    bootsPurchaseAmount: 250.00
+
+blades:
+  - bladesID: "REPLACE_WITH_UUID"
+    date_created: "2026-01-01"
+    bladesName: "John Wilson"
+    bladesModel: "Coronation Ace"
+    bladesSize: "9.5"
+    bladesPurchaseAmount: 350.00
+
+# A config pairs a boot with a blade. sConfigType: 1 = ice, 2 = off-ice.
+# sActiveFlag: 1 = currently in use, 0 = retired.
+configs:
+  - sConfigID: "REPLACE_WITH_UUID"
+    date_created: "2026-01-01"
+    uSkaterBladesID: "SAME_AS_BLADE_UUID_ABOVE"
+    uSkaterBootsID: "SAME_AS_BOOT_UUID_ABOVE"
+    sConfigType: 1
+    sActiveFlag: 1

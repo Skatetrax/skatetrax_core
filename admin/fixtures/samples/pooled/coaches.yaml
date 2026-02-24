@@ -1,0 +1,30 @@
+# Coaches -- shared across users
+# Row 1 is always the generic "no coach" placeholder (must match setup_db default)
+# Generate new UUIDs: python -c "from uuid import uuid4; print(uuid4())"
+
+- coach_id: "487d43b5-0a4d-4dc4-8cc2-ab06870a10bf"
+  coach_Fname: "-"
+  coach_Lname: "-"
+  coach_rate: 0
+  coach_phone: null
+  coach_email: null
+  coach_ijs_id: null
+  coach_usfsa_id: null
+
+- coach_id: "REPLACE_WITH_UUID"
+  coach_Fname: "Jane"
+  coach_Lname: "Doe"
+  coach_rate: 35
+  coach_phone: "5551234567"
+  coach_email: "jane.doe@example.com"
+  coach_ijs_id: null
+  coach_usfsa_id: null
+
+- coach_id: "REPLACE_WITH_UUID"
+  coach_Fname: "John"
+  coach_Lname: "Smith"
+  coach_rate: 40
+  coach_phone: null
+  coach_email: null
+  coach_ijs_id: null
+  coach_usfsa_id: null

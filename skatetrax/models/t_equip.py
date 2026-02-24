@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, Float, String, DateTime, UUID, ForeignKey
 from sqlalchemy.orm import mapped_column, Mapped
 from uuid import uuid4, UUID as UUIDV4
+from datetime import datetime, timezone
 from .base import Base
 
 
@@ -17,7 +18,7 @@ class uSkaterEquipManifest(Base):
     __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True)
-    date_created = Column(DateTime)
+    date_created = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     equip_manufacturer = Column(String)
     equip_model = Column(String)
     equip_notes = Column(String)
@@ -71,7 +72,7 @@ class uSkateConfig(Base):
     __table_args__ = {'extend_existing': True}
 
     sConfigID: Mapped[UUIDV4] = mapped_column(primary_key=True, default=uuid4)
-    date_created = Column(DateTime)
+    date_created = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     uSkaterUUID = Column(UUID)
     uSkaterBladesID = Column(UUID)
     uSkaterBootsID = Column(UUID)
@@ -109,7 +110,7 @@ class uSkaterBlades(Base):
     __table_args__ = {'extend_existing': True}
 
     bladesID: Mapped[UUIDV4] = mapped_column(primary_key=True, default=uuid4)
-    date_created = Column(DateTime)
+    date_created = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     bladesName = Column(String)
     bladesModel = Column(String)
     bladesSize = Column(String)
@@ -147,7 +148,7 @@ class uSkaterBoots(Base):
     __table_args__ = {'extend_existing': True}
 
     bootsID: Mapped[UUIDV4] = mapped_column(primary_key=True, default=uuid4)
-    date_created = Column(DateTime)
+    date_created = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     bootsName = Column(String)
     bootsModel = Column(String)
     bootsSize = Column(String)

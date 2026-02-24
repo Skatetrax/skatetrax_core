@@ -1,7 +1,7 @@
 import argparse
 #from models import coaches, locations, insert_data, equipment
 
-from skatetrax.models.ops.pencil import Location_Data, Coach_Data, User_Data
+from skatetrax.models.ops.pencil import Location_Data, Coach_Data, User_Data, Club_Data
 
 from skatetrax.models.cyberconnect2 import engine
 from datetime import datetime, timezone
@@ -24,8 +24,8 @@ from .t_coaches import Coaches
 # maintenance
 from .t_maint import uSkaterMaint
 
-# skate club memberships (USFSA)
-from .t_memberships import Club_Membership
+# skate club directory and memberships
+from .t_memberships import Club_Directory, Club_Members
 
 # camps, LTS, multiweek series
 from .t_classes import Skate_Camp, Skate_School
@@ -88,9 +88,37 @@ if __name__ == "__main__":
             {'id': '4', 'label': 'Guardian - Maybe not a skater, but a parent of one or more.'}
         ]
 
+        default_clubs = [
+            {
+                'club_id': 'c4dd2b9c-50f1-4f5b-a439-fd8f36a654d6',
+                'club_name': 'No Club',
+                'club_home_rink': None,
+                'club_cost': 0
+            }
+        ]
+
+        default_locations = [
+            {
+                'rink_id': 'b261166b-9e7c-4a96-ab06-ec630deb3321',
+                'rink_name': 'Off Ice',
+                'rink_address': '-',
+                'rink_city': '-',
+                'rink_state': '-',
+                'rink_country': '-',
+                'rink_zip': '00000',
+                'rink_url': '-',
+                'rink_phone': '-',
+                'rink_tz': None,
+                'data_source': 'skatetrax',
+                'date_created': date_created
+            }
+        ]
+
         User_Data.add_skater_roles(role_data)
         Location_Data.add_ice_type(ice_types)
-        #Coach_Data.add_coaches(default_coaches)
+        Location_Data.add_ice_rink(default_locations)
+        Coach_Data.add_coaches(default_coaches)
+        Club_Data.add_club(default_clubs)
 
     if args.drop:
         Base.metadata.drop_all(bind=engine)

@@ -1,0 +1,30 @@
+# Locations -- shared across users
+# The "Off Ice" placeholder is created by setup_db; no need to include it here.
+# Add real rinks used by your skaters. rink_tz should be an IANA timezone string.
+# data_source: "skatetrax" for manually added, or the name of an import source.
+
+- rink_id: "REPLACE_WITH_UUID"
+  rink_name: "Example Ice Arena"
+  rink_address: "123 Main St"
+  rink_city: "Anytown"
+  rink_state: "NC"
+  rink_country: "USA"
+  rink_zip: "27601"
+  rink_url: "https://example-ice.com"
+  rink_phone: "5559876543"
+  rink_tz: "America/New_York"
+  data_source: "skatetrax"
+  date_created: "2026-01-01 00:00:00"
+
+- rink_id: "REPLACE_WITH_UUID"
+  rink_name: "Another Rink"
+  rink_address: "456 Oak Ave"
+  rink_city: "Othertown"
+  rink_state: "CA"
+  rink_country: "USA"
+  rink_zip: "90210"
+  rink_url: "-"
+  rink_phone: "-"
+  rink_tz: "America/Los_Angeles"
+  data_source: "skatetrax"
+  date_created: "2026-01-01 00:00:00"
