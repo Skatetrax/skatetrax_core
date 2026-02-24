@@ -127,6 +127,56 @@ class SkaterAggregates:
         return self.aggregate(Ice_Time, "coach_cost", start, end)
 
 
+    @currency_usd
+    def equipment_cost(self):
+        """Total equipment spend: boots + blades + general gear."""
+        from ..t_equip import uSkaterBoots, uSkaterBlades, uSkaterEquipManifest
+        with self._get_session() as s:
+            boots = s.query(func.coalesce(func.sum(uSkaterBoots.bootsPurchaseAmount), 0)).filter(
+                uSkaterBoots.uSkaterUUID == self.uSkaterUUID).scalar()
+            blades = s.query(func.coalesce(func.sum(uSkaterBlades.bladesPurchaseAmount), 0)).filter(
+                uSkaterBlades.uSkaterUUID == self.uSkaterUUID).scalar()
+            gear = s.query(func.coalesce(func.sum(uSkaterEquipManifest.equip_cost), 0)).filter(
+                uSkaterEquipManifest.uSkaterUUID == self.uSkaterUUID).scalar()
+        return boots + blades + gear
+
+
+    @currency_usd
+    def membership_cost(self):
+        """Total club membership fees."""
+        from ..t_memberships import Club_Members
+        with self._get_session() as s:
+            return (
+                s.query(func.coalesce(func.sum(Club_Members.membership_fee), 0))
+                .filter(Club_Members.uSkaterUUID == self.uSkaterUUID)
+                .scalar()
+            )
+
+
+    @currency_usd
+    def competition_cost(self):
+        """Total competition entry fees."""
+        from ..t_events import Events_Competition
+        with self._get_session() as s:
+            return (
+                s.query(func.coalesce(func.sum(Events_Competition.event_cost), 0))
+                .filter(Events_Competition.uSkaterUUID == self.uSkaterUUID)
+                .scalar()
+            )
+
+
+    @currency_usd
+    def test_cost(self):
+        """Total test/performance fees."""
+        from ..t_tests import Event_Test
+        with self._get_session() as s:
+            return (
+                s.query(func.coalesce(func.sum(Event_Test.test_cost), 0))
+                .filter(Event_Test.uSkaterUUID == self.uSkaterUUID)
+                .scalar()
+            )
+
+
     def _resolve_timeframe(self, timeframe):
         if timeframe is None or timeframe == "total":
             return None, None
