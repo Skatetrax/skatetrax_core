@@ -1,4 +1,4 @@
-from sqlalchemy import func, select
+from sqlalchemy import func, select, distinct
 from datetime import date
 from uuid import UUID as PyUUID
 import calendar
@@ -347,13 +347,18 @@ class SkaterAggregates:
             group = self.aggregate(Ice_Time, "ice_time", start, end, ice_type_ids=self.GROUP_SESSION_IDS)
             practice = max(ice - coach - group, 0)
 
-            from ..t_events import SkaterEvent
+            from ..t_events import SkaterEvent, EventEntry, EventType
             with self._get_session() as s:
                 comp_count = (
-                    s.query(func.count(SkaterEvent.id))
-                    .filter(SkaterEvent.uSkaterUUID == self.uSkaterUUID)
-                    .filter(SkaterEvent.event_date >= start,
-                            SkaterEvent.event_date <= end)
+                    s.query(func.count(distinct(SkaterEvent.id)))
+                    .join(EventEntry, EventEntry.event_id == SkaterEvent.id)
+                    .join(EventType, EventEntry.event_type == EventType.id)
+                    .filter(
+                        SkaterEvent.uSkaterUUID == self.uSkaterUUID,
+                        SkaterEvent.event_date >= start,
+                        SkaterEvent.event_date <= end,
+                        EventType.category == "Competition",
+                    )
                     .scalar()
                 )
             comp_flag = 1 if comp_count > 0 else 0
