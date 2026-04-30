@@ -3,8 +3,7 @@ from sqlalchemy import func
 
 from ..cyberconnect2 import create_session, get_engine
 
-from ...utils.common import Timelines
-from ...utils.tz import utc_to_local
+from ...utils.tz import utc_to_local, today_in_tz, utc_naive_range_for_inclusive_local_dates, resolve_tz
 
 from ..t_ice_time import Ice_Time
 from ..t_locations import Locations
@@ -262,11 +261,15 @@ class Sessions_Tables():
     def ice_time_current_month(uSkaterUUID, tz=None, session=None):
         '''
         lists all ice sessions of a particular skater via uSkaterUUID
-        for the current month.
+        for the current month (interpreted in tz, or UTC when tz is omitted).
         Returns a pandas dataframe containing joined data of:
         date, ice session meta, coach meta, rink meta.
         '''
-        tl = Timelines.current_month(tz=tz)
+        today = today_in_tz(tz)
+        month_start = today.replace(day=1)
+        lo, hi_excl = utc_naive_range_for_inclusive_local_dates(
+            month_start, today, resolve_tz(None, tz)
+        )
 
         def _run(sess, engine):
             return pd.read_sql_query(
@@ -285,8 +288,8 @@ class Sessions_Tables():
                     Locations.rink_tz,
                 )
                 .where(Ice_Time.uSkaterUUID == uSkaterUUID)
-                .filter(Ice_Time.date >= tl['last'])
-                .filter(Ice_Time.date <= tl['first'])
+                .filter(Ice_Time.date >= lo)
+                .filter(Ice_Time.date < hi_excl)
                 .outerjoin(Locations, Ice_Time.rink_id == Locations.rink_id)
                 .outerjoin(IceType, Ice_Time.skate_type == IceType.ice_type_id)
                 .outerjoin(Coaches, Ice_Time.coach_id == Coaches.coach_id)
