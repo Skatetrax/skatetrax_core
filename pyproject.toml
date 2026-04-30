@@ -1,6 +1,6 @@
 [project]
 name = "skatetrax-core"
-version = "4.1.4"
+version = "4.1.5"
 description = "Core logic for Skatetrax"
 authors = [{ name = "Ashley L Young", email = "burning.rose85@gmail.com" }]
 readme = "README.md"

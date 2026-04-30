@@ -3,7 +3,14 @@ from datetime import datetime, date
 from zoneinfo import ZoneInfo
 from unittest.mock import patch
 
-from skatetrax.utils.tz import resolve_tz, utc_to_local, today_in_tz
+from skatetrax.utils.tz import (
+    resolve_tz,
+    utc_to_local,
+    today_in_tz,
+    local_date_start_as_utc_naive,
+    utc_naive_range_for_inclusive_local_dates,
+    intent_local_calendar_day_for_legacy_utc_midnight,
+)
 
 # run via: PYTHONPATH=. pytest tests/test_tz.py -v
 
@@ -46,6 +53,50 @@ class TestUtcToLocal:
         utc_dt = datetime(2026, 7, 15, 16, 0, 0)
         result = utc_to_local(utc_dt, "America/New_York")
         assert result.hour == 12  # EDT is UTC-4
+
+
+class TestLocalDateToUtcNaive:
+
+    def test_eastern_midnight_is_utc_offset(self):
+        d = date(2026, 2, 28)
+        utc_naive = local_date_start_as_utc_naive(d, "America/New_York")
+        assert utc_naive == datetime(2026, 2, 28, 5, 0, 0)
+
+    def test_utc_identity(self):
+        d = date(2026, 3, 1)
+        assert local_date_start_as_utc_naive(d, "UTC") == datetime(2026, 3, 1, 0, 0, 0)
+
+
+class TestIntentLocalDayLegacyMidnight:
+
+    def test_eastern_utc_midnight_bumps_to_stored_utc_date(self):
+        # Mar 3 00:00 UTC = Sunday PM US/Eastern → user meant Mon Mar 3
+        d = intent_local_calendar_day_for_legacy_utc_midnight(
+            datetime(2026, 3, 3, 0, 0, 0), "America/New_York"
+        )
+        assert d == date(2026, 3, 3)
+
+    def test_utc_skater_no_bump(self):
+        d = intent_local_calendar_day_for_legacy_utc_midnight(
+            datetime(2026, 3, 3, 0, 0, 0), "UTC"
+        )
+        assert d == date(2026, 3, 3)
+
+    def test_tokyo_same_calendar_no_bump(self):
+        d = intent_local_calendar_day_for_legacy_utc_midnight(
+            datetime(2026, 3, 3, 0, 0, 0), "Asia/Tokyo"
+        )
+        assert d == date(2026, 3, 3)
+
+
+class TestUtcNaiveRangeInclusive:
+
+    def test_february_span_new_york(self):
+        lo, hi_excl = utc_naive_range_for_inclusive_local_dates(
+            date(2026, 2, 1), date(2026, 2, 28), "America/New_York"
+        )
+        edge = datetime(2026, 3, 1, 0, 0, 0)
+        assert lo <= edge < hi_excl
 
 
 class TestTodayInTz:
