@@ -1,3 +1,4 @@
+import calendar
 import pytest
 from uuid import UUID as PyUUID
 from datetime import datetime, date, timezone, timedelta
@@ -6,7 +7,9 @@ from unittest.mock import patch
 from skatetrax.models.ops.data_aggregates import (
     SkaterAggregates, uMaintenanceV4, UserMeta, Equipment,
 )
+from skatetrax.models.ops.data_tables import Sessions_Tables
 from skatetrax.models.t_ice_time import Ice_Time
+from skatetrax.utils.tz import utc_to_local
 from skatetrax.models.t_maint import uSkaterMaint
 from skatetrax.models.t_equip import uSkaterBlades, uSkateConfig
 
@@ -168,6 +171,78 @@ class TestKnownSessionData:
 
         sa = SkaterAggregates(NEW_USER_UUID, session=seeded_session)
         assert sa.coach_cost("total") == "77.00"
+
+
+class TestIceTimeTzAlignment:
+    """Stored timestamps are naive UTC; bounds use the skater's calendar TZ."""
+
+    def test_month_bucket_matches_local_calendar_not_utc_date(self, seeded_session):
+        """UTC midnight March 1 is still Feb 28 evening in US/Eastern."""
+        _add_session(seeded_session, datetime(2026, 3, 1, 0, 0, 0), 45, 0, 0)
+        seeded_session.flush()
+
+        eastern = SkaterAggregates(
+            NEW_USER_UUID, session=seeded_session, tz="America/New_York"
+        )
+        assert eastern.aggregate(Ice_Time, "ice_time", date(2026, 2, 1), date(2026, 2, 28)) == 45
+        assert eastern.aggregate(Ice_Time, "ice_time", date(2026, 3, 1), date(2026, 3, 31)) == 0
+
+        utc_skater = SkaterAggregates(NEW_USER_UUID, session=seeded_session, tz="UTC")
+        assert utc_skater.aggregate(Ice_Time, "ice_time", date(2026, 3, 1), date(2026, 3, 31)) == 45
+
+
+class TestAggregateParityWithSessionTable:
+    """
+    End-to-end check: the same naive-UTC row is counted in exactly one skater-calendar
+    month in aggregates and shows the same (year, month) after the session-table
+    UTC→local conversion (seed rink uses America/New_York; pass the same tz so
+    aggregate bounds match display).
+    """
+
+    _SKATER_TZ = "America/New_York"
+
+    @pytest.mark.parametrize(
+        "stored_utc_naive",
+        [
+            # Original bug shape: naive “Mar 1 00:00 UTC” → Eastern Feb 28 evening
+            datetime(2026, 3, 1, 0, 0, 0),
+            # Same calendar day in Eastern (after conversion)
+            datetime(2026, 3, 1, 7, 0, 0),
+        ],
+    )
+    def test_one_session_one_month_aggregate_matches_table_display(
+        self, seeded_session, stored_utc_naive,
+    ):
+        mins = 45
+        _add_session(seeded_session, stored_utc_naive, mins, 0, 0)
+        seeded_session.flush()
+
+        # Reference: local calendar month as the UI table sees it (rink TZ matches skater here)
+        local = utc_to_local(stored_utc_naive, self._SKATER_TZ)
+        expect_y, expect_m = local.year, local.month
+
+        sa = SkaterAggregates(
+            NEW_USER_UUID, session=seeded_session, tz=self._SKATER_TZ
+        )
+        start_d = date(expect_y, expect_m, 1)
+        end_d = date(
+            expect_y, expect_m, calendar.monthrange(expect_y, expect_m)[1]
+        )
+        assert sa.aggregate(Ice_Time, "ice_time", start_d, end_d) == mins
+
+        # Neighbour month must not pick up this row (single-session sanity)
+        ny, nm = (expect_y + 1, 1) if expect_m == 12 else (expect_y, expect_m + 1)
+        n_last = calendar.monthrange(ny, nm)[1]
+        assert (
+            sa.aggregate(Ice_Time, "ice_time", date(ny, nm, 1), date(ny, nm, n_last))
+            == 0
+        )
+
+        df = Sessions_Tables.ice_time(
+            NEW_USER_UUID, tz=self._SKATER_TZ, session=seeded_session
+        )
+        shown = df.iloc[0]["date"]
+        assert (shown.year, shown.month) == (expect_y, expect_m)
 
 
 class TestTimeframeFiltering:

@@ -7,7 +7,12 @@ import calendar
 from ...models.cyberconnect2 import create_session
 from ...utils.timeframe_generator import TIMEFRAMES
 from ...utils.common import minutes_to_hours, currency_usd
-from ...utils.tz import today_in_tz, utc_to_local, resolve_tz
+from ...utils.tz import (
+    today_in_tz,
+    utc_to_local,
+    resolve_tz,
+    utc_naive_range_for_inclusive_local_dates,
+)
 
 from ..t_equip import uSkateConfig, uSkaterBlades, uSkaterBoots
 from ..t_skaterMeta import uSkaterConfig
@@ -37,6 +42,11 @@ class SkaterAggregates:
     def _get_session(self):
         return self.external_session or create_session()
 
+    def _utc_bounds_for_calendar(self, start_date: date, end_date: date):
+        """Inclusive local calendar dates → naive UTC half-open range for Ice_Time.date."""
+        return utc_naive_range_for_inclusive_local_dates(
+            start_date, end_date, resolve_tz(None, self.tz)
+        )
 
     def aggregate(self, model, field, start_date=None, end_date=None, ice_type_ids=None):
         """Sum field for this skater, optionally filtered by start/end dates and ice_type."""
@@ -44,7 +54,8 @@ class SkaterAggregates:
             column = getattr(model, field)
             q = s.query(func.sum(column)).filter(model.uSkaterUUID == self.uSkaterUUID)
             if start_date and end_date:
-                q = q.filter(model.date >= start_date, model.date <= end_date)
+                lo, hi_excl = self._utc_bounds_for_calendar(start_date, end_date)
+                q = q.filter(model.date >= lo, model.date < hi_excl)
             if ice_type_ids:
                 q = q.filter(model.skate_type.in_(ice_type_ids))
             result = q.scalar() or 0
@@ -259,7 +270,8 @@ class SkaterAggregates:
             q = s.query(func.count(Ice_Time.ice_time_id)).filter(
                 Ice_Time.uSkaterUUID == self.uSkaterUUID)
             if start and end:
-                q = q.filter(Ice_Time.date >= start, Ice_Time.date <= end)
+                lo, hi_excl = self._utc_bounds_for_calendar(start, end)
+                q = q.filter(Ice_Time.date >= lo, Ice_Time.date < hi_excl)
             return q.scalar()
 
     def distinct_coach_count(self, timeframe=None):
@@ -271,7 +283,8 @@ class SkaterAggregates:
                 Ice_Time.uSkaterUUID == self.uSkaterUUID,
                 Ice_Time.coach_time > 0)
             if start and end:
-                q = q.filter(Ice_Time.date >= start, Ice_Time.date <= end)
+                lo, hi_excl = self._utc_bounds_for_calendar(start, end)
+                q = q.filter(Ice_Time.date >= lo, Ice_Time.date < hi_excl)
             return q.scalar()
 
     def distinct_rink_count(self, timeframe=None):
@@ -282,7 +295,8 @@ class SkaterAggregates:
             q = s.query(func.count(func.distinct(Ice_Time.rink_id))).filter(
                 Ice_Time.uSkaterUUID == self.uSkaterUUID)
             if start and end:
-                q = q.filter(Ice_Time.date >= start, Ice_Time.date <= end)
+                lo, hi_excl = self._utc_bounds_for_calendar(start, end)
+                q = q.filter(Ice_Time.date >= lo, Ice_Time.date < hi_excl)
             return q.scalar()
 
     def earliest_session_date(self):
@@ -306,7 +320,8 @@ class SkaterAggregates:
                 .filter(Ice_Time.uSkaterUUID == self.uSkaterUUID)
             )
             if start and end:
-                q = q.filter(Ice_Time.date >= start, Ice_Time.date <= end)
+                lo, hi_excl = self._utc_bounds_for_calendar(start, end)
+                q = q.filter(Ice_Time.date >= lo, Ice_Time.date < hi_excl)
             rows = q.distinct().all()
             return [r[0] for r in rows if r[0]]
 
